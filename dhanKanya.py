@@ -61,7 +61,7 @@ def main():
     st.set_page_config(page_title="Financial Advisor for Your Dreams", page_icon=":moneybag:", layout="wide")
 
     # Create a navigation bar
-    menu = ["Home", "Templates", "Expense Tracker"]
+    menu = ["Home", "Scholarships & Schemes per your State", "Build Your Wealth"]
     choice = st.sidebar.selectbox("Navigation", menu)
 
     # Create the Anthropic client with the API key
