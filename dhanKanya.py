@@ -133,7 +133,7 @@ def main():
     check_env_file()
 
     # Create a navigation bar
-    menu = ["Home", "Scholarships & Schemes per your State", "Build Your Wealth"]
+    menu = ["Start with Voice", "Build your Wealth", "Savings and Budgeting"]
     choice = st.sidebar.selectbox("Navigation", menu)
 
     # Create the Anthropic client with extra error handling
@@ -166,11 +166,11 @@ def main():
         return
 
     # Display the selected page
-    if choice == "Home":
+    if choice == "Start with Voice":
         home_page(client)
-    elif choice == "Scholarships & Schemes per your State":
+    elif choice == "Build your Wealth":
         templates_page(client)
-    elif choice == "Build Your Wealth":
+    elif choice == "Savings and Budgeting":
         expense_tracker_page()
 
 def home_page(client):
