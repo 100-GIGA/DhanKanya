@@ -18,7 +18,7 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_community.vectorstores import Chroma
 
-load_dotenv()
+load_dotenv(dotenv_path='.env')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
