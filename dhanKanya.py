@@ -92,17 +92,22 @@ INTRODUCTION_PROMPTS = [
 #     elif choice == "Build Your Wealth":
 #         expense_tracker_page()
 
+# Validate that .env file exists and its structure is correct
 def check_env_file():
-    """Check the contents of .env file"""
-    logger.info("=== Checking .env file ===")
-    try:
-        with open('.env', 'r') as f:
-            for line in f:
-                if line.strip() and not line.startswith('#'):
-                    key = line.split('=')[0].strip()
-                    logger.info(f"Found config key: {key}")
-    except FileNotFoundError:
-        logger.info("No .env file found")
+    logger.info("=== Checking .env File ===")
+    if not os.path.exists('.env'):
+        logger.error(".env file does not exist.")
+        raise FileNotFoundError(".env file is missing.")
+
+    with open('.env', 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            if line.startswith('#') or line.strip() == '':
+                continue
+            if '=' not in line:
+                logger.error(f"Invalid line in .env file: {line}")
+                raise ValueError(f"Invalid line in .env file: {line}")
+        logger.info("Valid .env file structure.")
 
 def main():
     st.set_page_config(page_title="Financial Advisor for Your Dreams", page_icon=":moneybag:", layout="wide")
