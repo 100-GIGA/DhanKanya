@@ -331,7 +331,6 @@ def expense_tracker_page():
     display_expense_summary()
     display_expense_table()
 
-
 def get_voice_input():
     r = sr.Recognizer()
 
@@ -401,7 +400,6 @@ def query(query_text, client):
         logger.error(f"Error in query function: {e}")
         logger.error(traceback.format_exc())
         return "I'm sorry, but I encountered an error while processing your query. Please try again later."
-
 
 def get_response(prompt, client):
     """
