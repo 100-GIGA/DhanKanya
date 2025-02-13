@@ -262,61 +262,74 @@ def templates_page(client):
 
     logger.info(f"User selected state: {selected_state}")
 
-def expense_tracker_page():
-    st.title("Expense Tracker")
-    
-    # Initialize session state attributes if not already initialized
+def initialize_session():
+    """Initialize session state variables if not already set."""
     if "expenses" not in st.session_state:
-        st.session_state.expenses = {}
-        st.session_state.total_expenses = {"total": 0, "necessary": 0, "avoidable": 0}
+        st.session_state.expenses = []  # List to store expense records
+    if "expense_summary" not in st.session_state:
+        st.session_state.expense_summary = {"total": 0, "necessary": 0, "avoidable": 0}
+    if "selected_month" not in st.session_state:
         st.session_state.selected_month = datetime.datetime.now().strftime("%Y-%m")
 
-    # Create a form for entering new expenses
-    with st.form("expense_form"):
-        expense_date = st.date_input("Date")
-        expense_description = st.text_input("Description")
-        expense_amount = st.number_input("Amount (in ₹)", min_value=0.0, step=1.00)
-        expense_necessity = st.selectbox("Necessity", ["Necessary", "Could've been avoided"])
-        submitted = st.form_submit_button("Add Expense")
-        
-        if submitted:
-            # Store the expense in a dictionary or database
-            # For example, you can use a dictionary with the date as the key
-            date_str = expense_date.strftime("%Y-%m-%d")
-            if date_str not in st.session_state.expenses:
-                st.session_state.expenses[date_str] = []
-
-            category = "Necessary" if expense_necessity == "Necessary" else "Avoidable"
-            st.session_state.expenses[date_str].append({
-                "description": expense_description,
-                "amount": expense_amount,
-                "category": category
-            })
-
-            st.session_state.total_expenses[category.lower()] += expense_amount
-            st.session_state.total_expenses["total"] += expense_amount
-            st.success("Expense added successfully!")
-
-    # Display the total expenses for each category and total for selected month
-    st.subheader("Total Expenses")
-    st.write("Total: ₹<span style='color:green'>{:.2f}</span>".format(st.session_state.total_expenses["total"]), unsafe_allow_html=True)
-    st.write("Necessary: ₹<span style='color:green'>{:.2f}</span>".format(st.session_state.total_expenses["necessary"]), unsafe_allow_html=True)
-    st.write("Avoidable: ₹<span style='color:red'>{:.2f}</span>".format(st.session_state.total_expenses["avoidable"]), unsafe_allow_html=True)
+def add_expense(date, description, amount, category):
+    """Adds an expense entry to the session state and updates summary."""
+    expense_entry = {
+        "date": date.strftime("%Y-%m-%d"),
+        "description": description,
+        "amount": amount,
+        "category": category
+    }
     
-    # Display the expenses in a table organized by date
-    all_expenses = []
-    for date, expenses in sorted(st.session_state.expenses.items()):
-        for expense in expenses:
-            all_expenses.append({
-                "Date": date,
-                "Description": expense['description'],
-                "Amount": "₹ {:.2f}".format(expense['amount']),  
-                "Category": expense['category']
-            })
+    st.session_state.expenses.append(expense_entry)
+    st.session_state.expense_summary["total"] += amount
+    if category == "Necessary":
+        st.session_state.expense_summary["necessary"] += amount
+    else:
+        st.session_state.expense_summary["avoidable"] += amount
 
-    if all_expenses:
-        st.subheader("Expenses")
-        st.table(pd.DataFrame(all_expenses).set_index("Date"))
+    logger.info(f"Added expense: {expense_entry}")
+    st.success("Expense added successfully!")
+
+def display_expense_summary():
+    """Displays total, necessary, and avoidable expenses."""
+    st.subheader("Expense Summary")
+    st.markdown(f"### Total: ₹{st.session_state.expense_summary['total']:.2f}")
+    st.markdown(f"✅ **Necessary:** ₹{st.session_state.expense_summary['necessary']:.2f}")
+    st.markdown(f"⚠️ **Avoidable:** ₹{st.session_state.expense_summary['avoidable']:.2f}")
+    st.markdown("---")
+
+def display_expense_table():
+    """Displays recorded expenses in a structured table."""
+    if not st.session_state.expenses:
+        st.info("No expenses recorded yet.")
+        return
+
+    df_expenses = pd.DataFrame(st.session_state.expenses)
+    df_expenses["amount"] = df_expenses["amount"].apply(lambda x: f"₹ {x:.2f}")
+    st.subheader("Expense History")
+    st.dataframe(df_expenses.set_index("date"), use_container_width=True)
+
+def expense_tracker_page():
+    """Main function to render the Expense Tracker page."""
+    st.title("💰 Expense Tracker")
+    initialize_session()
+
+    # Expense entry form
+    with st.form("expense_form"):
+        expense_date = st.date_input("Date", value=datetime.date.today())
+        expense_description = st.text_input("Description")
+        expense_amount = st.number_input("Amount (₹)", min_value=0.0, step=1.0)
+        expense_category = st.selectbox("Category", ["Necessary", "Avoidable"])
+        submitted = st.form_submit_button("Add Expense")
+
+        if submitted:
+            if expense_description and expense_amount > 0:
+                add_expense(expense_date, expense_description, expense_amount, expense_category)
+            else:
+                st.error("Please enter a valid description and amount.")
+
+    display_expense_summary()
+    display_expense_table()
 
 
 def get_voice_input():
