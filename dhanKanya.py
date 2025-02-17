@@ -63,37 +63,6 @@ INTRODUCTION_PROMPTS = [
     r'namaste'
 ]
 
-# def main():
-#     st.set_page_config(page_title="Financial Advisor for Your Dreams", page_icon=":moneybag:", layout="wide")
-
-#     # Create a navigation bar
-#     menu = ["Home", "Scholarships & Schemes per your State", "Build Your Wealth"]
-#     choice = st.sidebar.selectbox("Navigation", menu)
-
-#     # Create the Anthropic client with the API key
-#     try:
-#         # Add debug logging
-#         logger.info(f"ANTHROPIC_API_KEY exists: {bool(ANTHROPIC_API_KEY)}")
-#         logger.info("Attempting to create Anthropic client")
-        
-#         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        
-#         logger.info("Successfully created Anthropic client")
-#         st.sidebar.success("AI assistant initialized successfully!")
-#     except Exception as e:
-#         logger.error(f"Error creating Anthropic client: {e}")
-#         logger.error(f"Full traceback: {traceback.format_exc()}")
-#         st.sidebar.error(f"Failed to initialize the AI assistant. Error: {str(e)}")
-#         return
-
-#     # Display the selected page
-#     if choice == "Home":
-#         home_page(client)
-#     elif choice == "Scholarships & Schemes per your State":
-#         templates_page(client)
-#     elif choice == "Build Your Wealth":
-#         expense_tracker_page()
-
 # Validate that .env file exists and its structure is correct
 def check_env_file():
     logger.info("=== Checking .env File ===")
@@ -412,7 +381,6 @@ def get_voice_input():
             except sr.RequestError as e:
                 status.update(label=f"⚠️ Could not connect to Google Speech API: {e}", state="error")
                 return None
-
 
 def query(query_text, client):
     try:
