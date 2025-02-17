@@ -380,44 +380,43 @@ def expense_tracker_page():
 def get_voice_input():
     r = sr.Recognizer()
 
-    with sr.Microphone() as source:
-        st.write("Speak now...")
-        audio = r.listen(source)
+    with st.status("Click the button and start speaking...", expanded=True) as status:  # Show status dynamically
+        with sr.Microphone() as source:
+            status.update(label="🎙️ Listening...", state="running")  # Update status to listening
+            st.write("Please speak now...")  # Temporary message for visibility
+            
+            audio = r.listen(source)
+            status.update(label="⏳ Processing your voice...", state="running")  # Update status to processing
 
-        try:
-            # Urdu language support
             try:
-                urdu_text = r.recognize_google(audio, language='ur-PK')
-            except sr.UnknownValueError:
-                urdu_text = None
-
-            # Telugu language support
-            try:
+                # Try recognizing speech in different languages
+                hindi_text = r.recognize_google(audio, language='hi-IN')
                 telugu_text = r.recognize_google(audio, language='te-IN')
-            except sr.UnknownValueError:
-                telugu_text = None
+                urdu_text = r.recognize_google(audio, language='ur-PK')
 
-            # Hindi language support
-            hindi_text = r.recognize_google(audio, language='hi-IN')
-
-            # Return the recognized text in the correct language
-            if hindi_text or telugu_text or urdu_text:
                 if hindi_text:
-                    return hindi_text
+                    recognized_text = hindi_text
                 elif telugu_text:
-                    return telugu_text
+                    recognized_text = telugu_text
                 elif urdu_text:
-                    return urdu_text
-            else:
-                st.error("Sorry, I could not understand your voice input in any supported language. Please try again.")
+                    recognized_text = urdu_text
+                else:
+                    recognized_text = None
 
-        except sr.UnknownValueError:
-            st.error("Sorry, I could not understand your voice input. Please try again.")
+                if recognized_text:
+                    status.update(label="✅ Voice input recognized!", state="complete")
+                    return recognized_text
+                else:
+                    status.update(label="❌ Could not recognize speech. Try again.", state="error")
+                    return None
 
-        except sr.RequestError as e:
-            st.error(f"Could not request results from Google Speech Recognition service; {e}")
+            except sr.UnknownValueError:
+                status.update(label="❌ Could not understand your voice. Please try again.", state="error")
+                return None
+            except sr.RequestError as e:
+                status.update(label=f"⚠️ Could not connect to Google Speech API: {e}", state="error")
+                return None
 
-    return None
 
 def query(query_text, client):
     try:
