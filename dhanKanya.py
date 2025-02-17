@@ -18,6 +18,8 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_community.vectorstores import Chroma
 
+from babel.numbers import format_currency
+
 load_dotenv(dotenv_path='.env')
 
 # Configure logging
@@ -263,73 +265,117 @@ def templates_page(client):
     logger.info(f"User selected state: {selected_state}")
 
 def initialize_session():
-    """Initialize session state variables if not already set."""
-    if "expenses" not in st.session_state:
-        st.session_state.expenses = []  # List to store expense records
-    if "expense_summary" not in st.session_state:
-        st.session_state.expense_summary = {"total": 0, "necessary": 0, "avoidable": 0}
-    if "selected_month" not in st.session_state:
-        st.session_state.selected_month = datetime.datetime.now().strftime("%Y-%m")
+    """Initialize session state variables."""
+    if 'savings_goal' not in st.session_state:
+        st.session_state.savings_goal = 0
+    if 'monthly_target' not in st.session_state:
+        st.session_state.monthly_target = 0
+    if 'earnings' not in st.session_state:
+        st.session_state.earnings = []
+    if 'expenses' not in st.session_state:
+        st.session_state.expenses = []
+    if 'saved_amount' not in st.session_state:
+        st.session_state.saved_amount = 0  # Track updated savings instantly
 
-def add_expense(date, description, amount, category):
-    """Adds an expense entry to the session state and updates summary."""
-    expense_entry = {
-        "date": date.strftime("%Y-%m-%d"),
-        "description": description,
-        "amount": amount,
-        "category": category
-    }
-    
-    st.session_state.expenses.append(expense_entry)
-    st.session_state.expense_summary["total"] += amount
-    if category == "Necessary":
-        st.session_state.expense_summary["necessary"] += amount
-    else:
-        st.session_state.expense_summary["avoidable"] += amount
+def update_savings():
+    """Update savings progress immediately."""
+    total_earnings = sum(e["amount"] for e in st.session_state.earnings)
+    total_expenses = sum(e["amount"] for e in st.session_state.expenses)
+    st.session_state.saved_amount = total_earnings - total_expenses
 
-    logger.info(f"Added expense: {expense_entry}")
-    st.success("Expense added successfully!")
-
-def display_expense_summary():
-    """Displays total, necessary, and avoidable expenses."""
-    st.subheader("Expense Summary")
-    st.markdown(f"### Total: ₹{st.session_state.expense_summary['total']:.2f}")
-    st.markdown(f"✅ **Necessary:** ₹{st.session_state.expense_summary['necessary']:.2f}")
-    st.markdown(f"⚠️ **Avoidable:** ₹{st.session_state.expense_summary['avoidable']:.2f}")
-    st.markdown("---")
-
-def display_expense_table():
-    """Displays recorded expenses in a structured table."""
-    if not st.session_state.expenses:
-        st.info("No expenses recorded yet.")
-        return
-
-    df_expenses = pd.DataFrame(st.session_state.expenses)
-    df_expenses["amount"] = df_expenses["amount"].apply(lambda x: f"₹ {x:.2f}")
-    st.subheader("Expense History")
-    st.dataframe(df_expenses.set_index("date"), use_container_width=True)
+def format_inr(amount):
+    return format_currency(amount, 'INR', locale='en_IN')
 
 def expense_tracker_page():
-    """Main function to render the Expense Tracker page."""
-    st.title("💰 Expense Tracker")
     initialize_session()
+    
+    # Page title
+    st.title("💰 Goal-Oriented Expense Tracker")
 
-    # Expense entry form
-    with st.form("expense_form"):
-        expense_date = st.date_input("Date", value=datetime.date.today())
-        expense_description = st.text_input("Description")
-        expense_amount = st.number_input("Amount (₹)", min_value=0.0, step=1.0)
-        expense_category = st.selectbox("Category", ["Necessary", "Avoidable"])
-        submitted = st.form_submit_button("Add Expense")
+    # Savings Goal Section
+    st.subheader("Your Savings Goal")
+    st.session_state.savings_goal = st.number_input("Total Savings Goal (₹)", min_value=0, step=1000)
+    st.session_state.monthly_target = st.number_input("Monthly Savings Target (₹)", min_value=0, step=500)
 
-        if submitted:
-            if expense_description and expense_amount > 0:
-                add_expense(expense_date, expense_description, expense_amount, expense_category)
-            else:
-                st.error("Please enter a valid description and amount.")
+    if st.session_state.savings_goal > 0 and st.session_state.monthly_target > 0:
+        months_required = st.session_state.savings_goal / st.session_state.monthly_target
+        months_required = int(months_required) + 1 if months_required % 1 > 0 else int(months_required)
+        st.markdown(f"*Estimated time to achieve goal: **{months_required} months***")
 
-    display_expense_summary()
-    display_expense_table()
+    # Progress Calculation
+    progress = min(st.session_state.saved_amount / st.session_state.savings_goal, 1.0) if st.session_state.savings_goal > 0 else 0
+
+    st.subheader("Savings Progress")
+    st.progress(progress)
+    pm_col1, pm_col2, pm_col3 = st.columns(3)
+    pm_col1.metric("Saved Amount", format_inr(st.session_state.saved_amount))
+    pm_col2.metric("More to Save", format_inr(max(st.session_state.savings_goal - st.session_state.saved_amount, 0)))
+    pm_col3.metric("Total Target", format_inr(st.session_state.savings_goal))
+
+    # Earnings and Expenses Input Side by Side
+    expns_col1, expns_col2 = st.columns(2)
+    with expns_col1:
+        st.subheader("Add Expenses")
+        with st.form("expenses_form"):
+            exp_amount = st.number_input("Expense Amount (₹)", min_value=0, step=100)
+            exp_desc = st.text_input("Expense Description")
+            exp_category = st.selectbox("Category", ["Rent", "Food", "Transport", "Shopping", "Bills", "Entertainment", "Other"])
+            exp_avoidable = st.checkbox("Is this expense avoidable?")
+            exp_submit = st.form_submit_button("Add Expense")
+            if exp_submit and exp_desc and exp_amount > 0:
+                st.session_state.expenses.append({
+                    "date": datetime.date.today(),
+                    "desc": exp_desc,
+                    "amount": exp_amount,
+                    "category": exp_category,
+                    "avoidable": exp_avoidable
+                })
+                update_savings()  # Instantly update savings
+                st.rerun()  # Force UI update
+
+    with expns_col2:
+        st.subheader("Add Earnings")
+        with st.form("earnings_form"):
+            e_amount = st.number_input("Earning Amount (₹)", min_value=0, step=100)
+            e_desc = st.text_input("Earning Description")
+            e_category = st.selectbox("Category", ["Scholarship", "Bonus", "Gift", "Investment Return", "Other"])
+            e_submit = st.form_submit_button("Add Earning")
+            if e_submit and e_desc and e_amount > 0:
+                st.session_state.earnings.append({
+                    "date": datetime.date.today(),
+                    "desc": e_desc,
+                    "amount": e_amount,
+                    "category": e_category
+                })
+                update_savings()  # Instantly update savings
+                st.rerun()  # Force UI update
+
+    # Summary Section
+    st.subheader("Financial Summary")
+    total_earnings = sum(e["amount"] for e in st.session_state.earnings)
+    total_expenses = sum(e["amount"] for e in st.session_state.expenses)
+    total_avoidable_expenses = sum(e["amount"] for e in st.session_state.expenses if e["avoidable"])
+
+    fs_col1, fs_col2, fs_col3 = st.columns(3)
+    fs_col1.metric("Total Earnings", format_inr(total_earnings))
+    fs_col2.metric("Total Expenses", format_inr(total_expenses))
+    fs_col3.metric("Avoidable Expenses", format_inr(total_avoidable_expenses))
+
+    # Ledger Table
+    st.subheader("📜 Earnings & Expenses Ledger")
+    ledger_data = [
+        {**e, "type": "Earning", "avoidable": "-"} for e in st.session_state.earnings
+    ] + [
+        {**e, "type": "Expense"} for e in st.session_state.expenses
+    ]
+
+    ledger_df = pd.DataFrame(ledger_data)
+    if not ledger_df.empty:
+        ledger_df["avoidable"] = ledger_df.get("avoidable", "-")
+        ledger_df = ledger_df.sort_values(by="date", ascending=False)
+        st.dataframe(ledger_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No earnings or expenses recorded yet.")
 
 def get_voice_input():
     r = sr.Recognizer()
