@@ -380,24 +380,29 @@ def expense_tracker_page():
 def get_voice_input():
     r = sr.Recognizer()
 
-    with st.status("Click the button and start speaking...", expanded=True) as status:  # Show status dynamically
+    with st.status("Click the button and start speaking...", expanded=True) as status: 
         with sr.Microphone() as source:
-            status.update(label="🎙️ Listening...", state="running")  # Update status to listening
-            st.write("Please speak now...")  # Temporary message for visibility
+            status.update(label="🎙️ Listening...", state="running")  
+            st.write("Please speak now...") 
             
             audio = r.listen(source)
             status.update(label="⏳ Processing your voice...", state="running")  # Update status to processing
 
             try:
-                # Try recognizing speech in different languages
+                english_text = r.recognize_google(audio, language='en-IN')
                 hindi_text = r.recognize_google(audio, language='hi-IN')
                 telugu_text = r.recognize_google(audio, language='te-IN')
+                kannada_text = r.recognize_google(audio, language='kn-IN')
                 urdu_text = r.recognize_google(audio, language='ur-PK')
 
-                if hindi_text:
+                if english_text:
+                    recognized_text = english_text
+                elif hindi_text:
                     recognized_text = hindi_text
                 elif telugu_text:
                     recognized_text = telugu_text
+                elif kannada_text:
+                    recognized_text = kannada_text
                 elif urdu_text:
                     recognized_text = urdu_text
                 else:
