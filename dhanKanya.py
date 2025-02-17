@@ -389,8 +389,6 @@ def get_voice_input():
             status.update(label="⏳ Processing your voice...", state="running")  # Update status to processing
 
             try:
-                telugu_text = r.recognize_google(audio, language='te-IN')
-                kannada_text = r.recognize_google(audio, language='kn-IN')
                 hindi_text = r.recognize_google(audio, language='hi-IN')
                 english_text = r.recognize_google(audio, language='en-IN')
 
@@ -398,12 +396,6 @@ def get_voice_input():
                     recognized_text = english_text
                 elif hindi_text:
                     recognized_text = hindi_text
-                elif telugu_text:
-                    recognized_text = telugu_text
-                elif kannada_text:
-                    recognized_text = kannada_text
-                elif urdu_text:
-                    recognized_text = urdu_text
                 else:
                     recognized_text = None
 
