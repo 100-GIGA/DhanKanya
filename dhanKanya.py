@@ -18,7 +18,9 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_community.vectorstores import Chroma
 
-load_dotenv()
+from babel.numbers import format_currency
+
+load_dotenv(dotenv_path='.env')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -61,48 +63,22 @@ INTRODUCTION_PROMPTS = [
     r'namaste'
 ]
 
-# def main():
-#     st.set_page_config(page_title="Financial Advisor for Your Dreams", page_icon=":moneybag:", layout="wide")
-
-#     # Create a navigation bar
-#     menu = ["Home", "Scholarships & Schemes per your State", "Build Your Wealth"]
-#     choice = st.sidebar.selectbox("Navigation", menu)
-
-#     # Create the Anthropic client with the API key
-#     try:
-#         # Add debug logging
-#         logger.info(f"ANTHROPIC_API_KEY exists: {bool(ANTHROPIC_API_KEY)}")
-#         logger.info("Attempting to create Anthropic client")
-        
-#         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        
-#         logger.info("Successfully created Anthropic client")
-#         st.sidebar.success("AI assistant initialized successfully!")
-#     except Exception as e:
-#         logger.error(f"Error creating Anthropic client: {e}")
-#         logger.error(f"Full traceback: {traceback.format_exc()}")
-#         st.sidebar.error(f"Failed to initialize the AI assistant. Error: {str(e)}")
-#         return
-
-#     # Display the selected page
-#     if choice == "Home":
-#         home_page(client)
-#     elif choice == "Scholarships & Schemes per your State":
-#         templates_page(client)
-#     elif choice == "Build Your Wealth":
-#         expense_tracker_page()
-
+# Validate that .env file exists and its structure is correct
 def check_env_file():
-    """Check the contents of .env file"""
-    logger.info("=== Checking .env file ===")
-    try:
-        with open('.env', 'r') as f:
-            for line in f:
-                if line.strip() and not line.startswith('#'):
-                    key = line.split('=')[0].strip()
-                    logger.info(f"Found config key: {key}")
-    except FileNotFoundError:
-        logger.info("No .env file found")
+    logger.info("=== Checking .env File ===")
+    if not os.path.exists('.env'):
+        logger.error(".env file does not exist.")
+        raise FileNotFoundError(".env file is missing.")
+
+    with open('.env', 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            if line.startswith('#') or line.strip() == '':
+                continue
+            if '=' not in line:
+                logger.error(f"Invalid line in .env file: {line}")
+                raise ValueError(f"Invalid line in .env file: {line}")
+        logger.info("Valid .env file structure.")
 
 def main():
     st.set_page_config(page_title="Financial Advisor for Your Dreams", page_icon=":moneybag:", layout="wide")
@@ -128,7 +104,7 @@ def main():
     check_env_file()
 
     # Create a navigation bar
-    menu = ["Home", "Scholarships & Schemes per your State", "Build Your Wealth"]
+    menu = ["Start with Voice", "Build your Wealth", "Savings and Budgeting"]
     choice = st.sidebar.selectbox("Navigation", menu)
 
     # Create the Anthropic client with extra error handling
@@ -161,11 +137,11 @@ def main():
         return
 
     # Display the selected page
-    if choice == "Home":
+    if choice == "Start with Voice":
         home_page(client)
-    elif choice == "Scholarships & Schemes per your State":
+    elif choice == "Build your Wealth":
         templates_page(client)
-    elif choice == "Build Your Wealth":
+    elif choice == "Savings and Budgeting":
         expense_tracker_page()
 
 def home_page(client):
@@ -257,104 +233,154 @@ def templates_page(client):
 
     logger.info(f"User selected state: {selected_state}")
 
+def initialize_session():
+    """Initialize session state variables."""
+    if 'savings_goal' not in st.session_state:
+        st.session_state.savings_goal = 0
+    if 'monthly_target' not in st.session_state:
+        st.session_state.monthly_target = 0
+    if 'earnings' not in st.session_state:
+        st.session_state.earnings = []
+    if 'expenses' not in st.session_state:
+        st.session_state.expenses = []
+    if 'saved_amount' not in st.session_state:
+        st.session_state.saved_amount = 0  # Track updated savings instantly
+
+def update_savings():
+    """Update savings progress immediately."""
+    total_earnings = sum(e["amount"] for e in st.session_state.earnings)
+    total_expenses = sum(e["amount"] for e in st.session_state.expenses)
+    st.session_state.saved_amount = total_earnings - total_expenses
+
+def format_inr(amount):
+    return format_currency(amount, 'INR', locale='en_IN')
+
 def expense_tracker_page():
-    st.title("Expense Tracker")
+    initialize_session()
     
-    # Initialize session state attributes if not already initialized
-    if "expenses" not in st.session_state:
-        st.session_state.expenses = {}
-        st.session_state.total_expenses = {"total": 0, "necessary": 0, "avoidable": 0}
-        st.session_state.selected_month = datetime.datetime.now().strftime("%Y-%m")
+    # Page title
+    st.title("💰 Goal-Oriented Expense Tracker")
 
-    # Create a form for entering new expenses
-    with st.form("expense_form"):
-        expense_date = st.date_input("Date")
-        expense_description = st.text_input("Description")
-        expense_amount = st.number_input("Amount (in ₹)", min_value=0.0, step=1.00)
-        expense_necessity = st.selectbox("Necessity", ["Necessary", "Could've been avoided"])
-        submitted = st.form_submit_button("Add Expense")
-        
-        if submitted:
-            # Store the expense in a dictionary or database
-            # For example, you can use a dictionary with the date as the key
-            date_str = expense_date.strftime("%Y-%m-%d")
-            if date_str not in st.session_state.expenses:
-                st.session_state.expenses[date_str] = []
+    # Savings Goal Section
+    st.subheader("Your Savings Goal")
+    st.session_state.savings_goal = st.number_input("Total Savings Goal (₹)", min_value=0, step=1000)
+    st.session_state.monthly_target = st.number_input("Monthly Savings Target (₹)", min_value=0, step=500)
 
-            category = "Necessary" if expense_necessity == "Necessary" else "Avoidable"
-            st.session_state.expenses[date_str].append({
-                "description": expense_description,
-                "amount": expense_amount,
-                "category": category
-            })
+    if st.session_state.savings_goal > 0 and st.session_state.monthly_target > 0:
+        months_required = st.session_state.savings_goal / st.session_state.monthly_target
+        months_required = int(months_required) + 1 if months_required % 1 > 0 else int(months_required)
+        st.markdown(f"*Estimated time to achieve goal: **{months_required} months***")
 
-            st.session_state.total_expenses[category.lower()] += expense_amount
-            st.session_state.total_expenses["total"] += expense_amount
-            st.success("Expense added successfully!")
+    # Progress Calculation
+    progress = min(st.session_state.saved_amount / st.session_state.savings_goal, 1.0) if st.session_state.savings_goal > 0 else 0
 
-    # Display the total expenses for each category and total for selected month
-    st.subheader("Total Expenses")
-    st.write("Total: ₹<span style='color:green'>{:.2f}</span>".format(st.session_state.total_expenses["total"]), unsafe_allow_html=True)
-    st.write("Necessary: ₹<span style='color:green'>{:.2f}</span>".format(st.session_state.total_expenses["necessary"]), unsafe_allow_html=True)
-    st.write("Avoidable: ₹<span style='color:red'>{:.2f}</span>".format(st.session_state.total_expenses["avoidable"]), unsafe_allow_html=True)
-    
-    # Display the expenses in a table organized by date
-    all_expenses = []
-    for date, expenses in sorted(st.session_state.expenses.items()):
-        for expense in expenses:
-            all_expenses.append({
-                "Date": date,
-                "Description": expense['description'],
-                "Amount": "₹ {:.2f}".format(expense['amount']),  
-                "Category": expense['category']
-            })
+    st.subheader("Savings Progress")
+    st.progress(progress)
+    pm_col1, pm_col2, pm_col3 = st.columns(3)
+    pm_col1.metric("Saved Amount", format_inr(st.session_state.saved_amount))
+    pm_col2.metric("More to Save", format_inr(max(st.session_state.savings_goal - st.session_state.saved_amount, 0)))
+    pm_col3.metric("Total Target", format_inr(st.session_state.savings_goal))
 
-    if all_expenses:
-        st.subheader("Expenses")
-        st.table(pd.DataFrame(all_expenses).set_index("Date"))
+    # Earnings and Expenses Input Side by Side
+    expns_col1, expns_col2 = st.columns(2)
+    with expns_col1:
+        st.subheader("Add Expenses")
+        with st.form("expenses_form"):
+            exp_amount = st.number_input("Expense Amount (₹)", min_value=0, step=100)
+            exp_desc = st.text_input("Expense Description")
+            exp_category = st.selectbox("Category", ["Rent", "Food", "Transport", "Shopping", "Bills", "Entertainment", "Other"])
+            exp_avoidable = st.checkbox("Is this expense avoidable?")
+            exp_submit = st.form_submit_button("Add Expense")
+            if exp_submit and exp_desc and exp_amount > 0:
+                st.session_state.expenses.append({
+                    "date": datetime.date.today(),
+                    "desc": exp_desc,
+                    "amount": exp_amount,
+                    "category": exp_category,
+                    "avoidable": exp_avoidable
+                })
+                update_savings()  # Instantly update savings
+                st.rerun()  # Force UI update
 
+    with expns_col2:
+        st.subheader("Add Earnings")
+        with st.form("earnings_form"):
+            e_amount = st.number_input("Earning Amount (₹)", min_value=0, step=100)
+            e_desc = st.text_input("Earning Description")
+            e_category = st.selectbox("Category", ["Scholarship", "Bonus", "Gift", "Investment Return", "Other"])
+            e_submit = st.form_submit_button("Add Earning")
+            if e_submit and e_desc and e_amount > 0:
+                st.session_state.earnings.append({
+                    "date": datetime.date.today(),
+                    "desc": e_desc,
+                    "amount": e_amount,
+                    "category": e_category
+                })
+                update_savings()  # Instantly update savings
+                st.rerun()  # Force UI update
+
+    # Summary Section
+    st.subheader("Financial Summary")
+    total_earnings = sum(e["amount"] for e in st.session_state.earnings)
+    total_expenses = sum(e["amount"] for e in st.session_state.expenses)
+    total_avoidable_expenses = sum(e["amount"] for e in st.session_state.expenses if e["avoidable"])
+
+    fs_col1, fs_col2, fs_col3 = st.columns(3)
+    fs_col1.metric("Total Earnings", format_inr(total_earnings))
+    fs_col2.metric("Total Expenses", format_inr(total_expenses))
+    fs_col3.metric("Avoidable Expenses", format_inr(total_avoidable_expenses))
+
+    # Ledger Table
+    st.subheader("📜 Earnings & Expenses Ledger")
+    ledger_data = [
+        {**e, "type": "Earning", "avoidable": "-"} for e in st.session_state.earnings
+    ] + [
+        {**e, "type": "Expense"} for e in st.session_state.expenses
+    ]
+
+    ledger_df = pd.DataFrame(ledger_data)
+    if not ledger_df.empty:
+        ledger_df["avoidable"] = ledger_df.get("avoidable", "-")
+        ledger_df = ledger_df.sort_values(by="date", ascending=False)
+        st.dataframe(ledger_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No earnings or expenses recorded yet.")
 
 def get_voice_input():
     r = sr.Recognizer()
 
-    with sr.Microphone() as source:
-        st.write("Speak now...")
-        audio = r.listen(source)
+    with st.status("Click the button and start speaking...", expanded=True) as status: 
+        with sr.Microphone() as source:
+            status.update(label="🎙️ Listening...", state="running")  
+            st.write("Please speak now...") 
+            
+            audio = r.listen(source)
+            status.update(label="⏳ Processing your voice...", state="running")  # Update status to processing
 
-        try:
-            # Urdu language support
             try:
-                urdu_text = r.recognize_google(audio, language='ur-PK')
+                hindi_text = r.recognize_google(audio, language='hi-IN')
+                english_text = r.recognize_google(audio, language='en-IN')
+
+                if english_text:
+                    recognized_text = english_text
+                elif hindi_text:
+                    recognized_text = hindi_text
+                else:
+                    recognized_text = None
+
+                if recognized_text:
+                    status.update(label="✅ Voice input recognized!", state="complete")
+                    return recognized_text
+                else:
+                    status.update(label="❌ Could not recognize speech. Try again.", state="error")
+                    return None
+
             except sr.UnknownValueError:
-                urdu_text = None
-
-            # Telugu language support
-            try:
-                telugu_text = r.recognize_google(audio, language='te-IN')
-            except sr.UnknownValueError:
-                telugu_text = None
-
-            # Hindi language support
-            hindi_text = r.recognize_google(audio, language='hi-IN')
-
-            # Return the recognized text in the correct language
-            if hindi_text or telugu_text or urdu_text:
-                if hindi_text:
-                    return hindi_text
-                elif telugu_text:
-                    return telugu_text
-                elif urdu_text:
-                    return urdu_text
-            else:
-                st.error("Sorry, I could not understand your voice input in any supported language. Please try again.")
-
-        except sr.UnknownValueError:
-            st.error("Sorry, I could not understand your voice input. Please try again.")
-
-        except sr.RequestError as e:
-            st.error(f"Could not request results from Google Speech Recognition service; {e}")
-
-    return None
+                status.update(label="❌ Could not understand your voice. Please try again.", state="error")
+                return None
+            except sr.RequestError as e:
+                status.update(label=f"⚠️ Could not connect to Google Speech API: {e}", state="error")
+                return None
 
 def query(query_text, client):
     try:
@@ -383,7 +409,6 @@ def query(query_text, client):
         logger.error(f"Error in query function: {e}")
         logger.error(traceback.format_exc())
         return "I'm sorry, but I encountered an error while processing your query. Please try again later."
-
 
 def get_response(prompt, client):
     """
