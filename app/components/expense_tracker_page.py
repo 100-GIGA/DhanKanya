@@ -25,6 +25,8 @@ from app.services.expense_service import (
     calculate_total_expenses
 )
 from app.utils.helpers import format_inr
+from app.models.expense_tracker import TransactionCategory
+from app.services.expense_tracker_service import ExpenseTrackerService
 
 def render(use_reactive_interface: bool = True) -> None:
     """
@@ -68,11 +70,16 @@ def expense_tracker_page() -> None:
     # Initialize session
     initialize_session()
     
+    # Ensure the expense_tracker service is initialized in session state
+    if "expense_tracker" not in st.session_state:
+        st.session_state.expense_tracker = ExpenseTrackerService()
+    
     # Page title
-    st.title("💰 Goal-Oriented Expense Tracker")
+    st.title("💰 Smart Expense Tracker")
+    st.markdown("Track your expenses, manage your savings, and achieve your financial goals!")
 
     # Savings Goal Section
-    st.subheader("Your Savings Goal")
+    st.subheader("🎯 Savings Goal")
     
     # Make sure the session_state key exists before using it
     if "savings_goal_input" not in st.session_state:
@@ -124,47 +131,53 @@ def expense_tracker_page() -> None:
     expns_col1, expns_col2 = st.columns(2)
     
     with expns_col1:
-        st.subheader("Add Expenses")
-        with st.form("expenses_form"):
-            exp_amount = st.number_input("Expense Amount (₹)", min_value=0, step=100)
-            exp_desc = st.text_input("Expense Description")
+        st.subheader("💸 Add Expense")
+        with st.form("expense_form"):
+            exp_amount = st.number_input("Amount (₹)", min_value=0, step=100)
+            exp_desc = st.text_input("Description", placeholder="What did you spend on?")
             exp_category = st.selectbox("Category", 
-                ["Rent", "Food", "Transport", "Shopping", "Bills", "Entertainment", "Other"])
-            exp_avoidable = st.checkbox("Is this expense avoidable?")
+                [cat.value for cat in TransactionCategory if cat.value in ["Rent", "Food", "Transport", "Shopping", "Bills", "Entertainment", "Other"]],
+                key="exp_category"
+            )
+            exp_avoidable = st.checkbox("Is this expense avoidable?", key="exp_avoidable", help="Mark if this expense could have been avoided")
             exp_submit = st.form_submit_button("Add Expense")
             
             if exp_submit and exp_desc and exp_amount > 0:
                 # Use the service function directly
-                add_expense(
-                    date=datetime.date.today(),
-                    category=exp_category,
+                st.session_state.expense_tracker.add_transaction(
                     description=exp_desc,
                     amount=exp_amount,
-                    avoidable=exp_avoidable
+                    category=TransactionCategory(exp_category),
+                    transaction_type="expense",
+                    is_avoidable=exp_avoidable
                 )
-                st.rerun()  # Force UI update
+                st.success("Expense added successfully!")
+                st.rerun()
 
     with expns_col2:
-        st.subheader("Add Earnings")
-        with st.form("earnings_form"):
-            e_amount = st.number_input("Earning Amount (₹)", min_value=0, step=100)
-            e_desc = st.text_input("Earning Description")
+        st.subheader("💰 Add Income")
+        with st.form("income_form"):
+            e_amount = st.number_input("Amount (₹)", min_value=0, step=100)
+            e_desc = st.text_input("Description", placeholder="What's the source of income?")
             e_category = st.selectbox("Category", 
-                ["Scholarship", "Bonus", "Gift", "Investment Return", "Other"])
-            e_submit = st.form_submit_button("Add Earning")
+                [cat.value for cat in TransactionCategory if cat.value in ["Salary", "Scholarship", "Bonus", "Gift", "Investment Return", "Other"]],
+                key="inc_category"
+            )
+            e_submit = st.form_submit_button("Add Income")
             
             if e_submit and e_desc and e_amount > 0:
                 # Use the service function directly
-                add_earning(
-                    date=datetime.date.today(),
-                    category=e_category,
+                st.session_state.expense_tracker.add_transaction(
                     description=e_desc,
-                    amount=e_amount
+                    amount=e_amount,
+                    category=TransactionCategory(e_category),
+                    transaction_type="income"
                 )
-                st.rerun()  # Force UI update
+                st.success("Income added successfully!")
+                st.rerun()
 
     # Summary Section
-    st.subheader("Financial Summary")
+    st.subheader("📊 Financial Summary")
     
     # Calculate the totals using service functions
     total_earnings = calculate_total_earnings()
@@ -178,7 +191,7 @@ def expense_tracker_page() -> None:
     fs_col3.metric("Avoidable Expenses", format_inr(total_avoidable_expenses))
 
     # Ledger Table
-    st.subheader("📜 Earnings & Expenses Ledger")
+    st.subheader("📜 Transaction Ledger")
     
     # Create a combined list of earnings and expenses
     ledger_data = []

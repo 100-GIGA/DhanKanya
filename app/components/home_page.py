@@ -46,29 +46,56 @@ def render(client: anthropic.Anthropic) -> None:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display chat messages
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    # Create a container for chat messages with fixed height and scrolling
+    chat_container = st.container()
+    with chat_container:
+        # Display chat messages
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
-    # Add voice input functionality
-    st.write("You can ask questions in Hindi using your voice or type them in English.")
-    voice_input = st.button("🎙️ Use voice input")
+    # Add some spacing before the input area
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    if voice_input:
-        prompt = get_voice_input()
-    else:
-        prompt = st.chat_input("Ask a question in English")
-
-    # Process user input
-    if prompt:
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        # Get assistant response
-        with st.chat_message("assistant"):
-            response = get_response(prompt, client)
-            st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response}) 
+    # Create a container for the input area
+    input_container = st.container()
+    with input_container:
+        # Add voice input functionality
+        st.write("You can ask questions in Hindi using your voice or type them in English.")
+        
+        # Create a form to keep the input and button in the same row
+        with st.form(key="chat_form", clear_on_submit=True):
+            # Create a row with the input and button
+            input_col1, input_col2 = st.columns([6, 1])
+            
+            with input_col1:
+                prompt = st.text_input("Ask a question in English", key="chat_input", label_visibility="collapsed")
+            
+            with input_col2:
+                voice_input = st.form_submit_button("🎙️ Use voice", use_container_width=False)
+            
+            # Handle form submission
+            if voice_input:
+                prompt = get_voice_input()
+                if prompt:
+                    st.session_state.messages.append({"role": "user", "content": prompt})
+                    with st.chat_message("user"):
+                        st.markdown(prompt)
+                    
+                    with st.chat_message("assistant"):
+                        response = get_response(prompt, client)
+                        st.markdown(response)
+                        st.session_state.messages.append({"role": "assistant", "content": response})
+                    st.rerun()
+            
+            # Handle text input submission
+            if prompt:
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+                
+                with st.chat_message("assistant"):
+                    response = get_response(prompt, client)
+                    st.markdown(response)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                st.rerun() 

@@ -24,10 +24,10 @@ def initialize_session() -> None:
         st.session_state.earnings = []
         
     if "income" not in st.session_state:
-        st.session_state.income = 10000
+        st.session_state.income = 4000
         
     if "savings_goal" not in st.session_state:
-        st.session_state.savings_goal = 5000
+        st.session_state.savings_goal = 45000
         
     if "savings" not in st.session_state:
         st.session_state.savings = 0

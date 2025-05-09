@@ -27,13 +27,58 @@ def main():
     and renders the appropriate page based on user selection.
     """
     # Configure page
-    st.set_page_config(page_title=APP_TITLE, page_icon=APP_ICON, layout=APP_LAYOUT)
+    st.set_page_config(
+        page_title="Smart Expense Tracker",
+        page_icon="💰",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
 
     # Log system information for diagnostics
     log_system_info()
     
     # Check .env file
     check_env_file()
+
+    # Add custom CSS for layout and spacing only (no hardcoded colors)
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            max-width: none;
+            padding: 1rem 2rem;
+        }
+        .stMetric {
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+        .stForm {
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+        .stButton > button {
+            width: 100%;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+        }
+        .stDataFrame {
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+        h1, h2, h3 {
+            padding-top: 1rem;
+            padding-bottom: 0.5rem;
+        }
+        .element-container {
+            margin-bottom: 1rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
     # Navigation menu items
     menu = ["Start with Voice", "Build your Wealth", "Savings and Budgeting"]
