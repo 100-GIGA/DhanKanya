@@ -1,0 +1,54 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Code Style Guidelines
+
+## Naming Conventions
+- Use `snake_case` for functions, variables, modules, and packages
+- Use `PascalCase` for classes
+- Use `UPPERCASE_WITH_UNDERSCORES` for constants
+- Use meaningful, descriptive names that reflect purpose
+- Avoid single-letter variables except in simple loops or comprehensions
+
+## File Structure
+- Each file should have a clear, specific purpose
+- Include module-level docstring at the top of each file
+- Group imports in the following order:
+  1. Standard library imports
+  2. Third-party imports
+  3. Local application imports
+- Add a blank line between each import group
+
+## Function Design
+- Functions should have a single responsibility
+- Aim for functions under 30 lines where possible
+- Use descriptive parameter names
+- Add type hints to parameters and return values
+- Include docstrings explaining purpose, parameters, and return values
+
+## Class Design
+- Follow the Single Responsibility Principle
+- Initialize all instance variables in `__init__`
+- Use descriptive method names that indicate action
+- Order methods in a logical manner (constructors first, then public, then private)
+
+## Comments and Documentation
+- Write docstrings for all public modules, functions, classes, and methods
+- Format docstrings according to Google style
+- Include examples in docstrings where helpful
+- Comment complex logic, but prefer clear code over excessive comments
+- Keep comments up to date with code changes
+
+## Error Handling
+- Use specific exception types instead of bare `except` clauses
+- Provide context with exception messages
+- Log exceptions appropriately
+- Handle errors at the appropriate level of abstraction
+
+## Code Formatting
+- Use consistent indentation (4 spaces)
+- Limit line length to 88 characters (Black default)
+- Use empty lines to separate logical sections
+- Be consistent with spacing around operators

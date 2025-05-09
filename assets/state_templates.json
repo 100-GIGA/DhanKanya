@@ -23,7 +23,7 @@
         ]
     },
     "Arunachal Pradesh": {
-        "Sample Prompts for Arunachal Pradesh": [
+        "Sample Prompts": [
             "College fees in Arunachal Pradesh are giving me a headache! Are there scholarships I can apply for to help out?",
             "I heard about government schemes for girls' education in Arunachal Pradesh. Can you help me find the best one for me?",
             "Tuition fees are a barrier to my education. Are there any government schemes in Arunachal Pradesh that can help me overcome this challenge?",
@@ -36,7 +36,7 @@
         ]
     },
     "Bihar": {
-        "Prompts for Bihar": [
+        "Sample Prompts": [
             "Due to financial limitations, pursuing higher education seems difficult. Are there any government schemes in Bihar that can empower girls like me to achieve our academic goals?",
             "I'm interested in learning more about educational options for girls in Bihar, particularly those that might offer financial assistance through scholarships.",
             "I'm eager to further my education! Can you provide me with comprehensive details on educational programs available for girls in Bihar?",
@@ -47,11 +47,11 @@
             "Are there any scholarships specifically for graduation or post-graduation studies in Bihar?",
             "When is the application deadline for the Bihar scholarships for female students?",
             "What is the official website to apply for scholarships in Bihar?",
-            "I belong to a reservation category (SC, ST, OBC, EBC), are there any additional scholarships available for me in Bihar?"  
+            "I belong to a reservation category (SC, ST, OBC, EBC), are there any additional scholarships available for me in Bihar?"
         ]
     },
     "Chhattisgarh": {
-        "Sample Prompts" :[
+        "Sample Prompts": [
             "What scholarships are offered by the Chhattisgarh government specifically for female students?",
             "Are there any merit-based scholarships available for higher education in Chhattisgarh?",
             "When do scholarship applications typically open in Chhattisgarh?",
@@ -239,7 +239,7 @@
         ]
     },
     "Odisha": {
-        "Prompts for Odisha": [
+        "Sample Prompts": [
             "College expenses are a concern for me in Odisha. Are there any government scholarships or financial aid programs that can help alleviate this burden?",
             "I'm a female student in Odisha seeking information on scholarships or schemes specifically designed to support girls in their educational pursuits.",
             "As a student from Odisha belonging to a reservation category (SC, ST, OBC), are there scholarships available that cater to students like me?",
@@ -253,7 +253,7 @@
         ]
     },
     "Punjab": {
-        "Prompts for Punjab": [
+        "Sample Prompts": [
             "I'm facing financial challenges in pursuing higher education in Punjab. Are there existing government scholarships or schemes that can support me?",
             "As a female student in Punjab, I'm interested in scholarships or financial aid programs specifically aimed at empowering girls in their academic endeavors.",
             "Being from a reservation category (SC, ST, OBC) in Punjab, are there scholarships tailored to students in similar circumstances?",
@@ -267,7 +267,7 @@
         ]
     },
     "Rajasthan": {
-        "Prompts for Rajasthan": [
+        "Sample Prompts": [
             "The cost of college education is a concern for me in Rajasthan. Are there government scholarships or financial aid programs that can assist female students like me?",
             "As a girl in Rajasthan, I'm looking for scholarships or schemes specifically tailored to support female students in their educational pursuits.",
             "I belong to a reservation category (SC, ST, OBC) in Rajasthan. Are there scholarships available that cater to students from similar backgrounds?",
@@ -280,8 +280,7 @@
             "When do scholarship applications typically open in Rajasthan, and how can I ensure I don't miss any opportunities?"
         ]
     },
-    "Sikkim":
-    {
+    "Sikkim": {
         "Sample Prompts": [
             "I'm interested in pursuing higher education in Sikkim. Can you provide details on the Sikkim Chief Minister's Meritorious Scholarship Scheme for female students?",
             "As a girl from Sikkim, I'd like to know more about the Sikkim Government's Post Matric Scholarship Scheme. What are the eligibility criteria and application process?",
@@ -292,8 +291,7 @@
             "As a first-generation learner from Sikkim, I'm worried about managing my college finances. What are some budgeting tips or financial planning resources available for girls like me?"
         ]
     },
-    "Telangana":
-    {
+    "Telangana": {
         "Sample Prompts": [
             "I'm a girl from Telangana and want to pursue higher education. Can you provide details on the Telangana State Post-Matric Scholarship Scheme for female students?",
             "My family is facing financial constraints in Telangana. Are there any government schemes that offer scholarships or fee reimbursements for girls from low-income backgrounds?",
@@ -305,8 +303,7 @@
             "What is EAMCET/ ECET exam? How can it benefit me?"
         ]
     },
-    "Tripura":
-    {
+    "Tripura": {
         "Sample Prompts": [
             "I'm a girl from Tripura and want to pursue higher education. Can you provide details on the Tripura Scholarship Scheme for female students?",
             "My family in Tripura is facing financial constraints. Are there any government schemes that offer scholarships or fee reimbursements for girls from low-income backgrounds?",
@@ -318,7 +315,7 @@
         ]
     },
     "Uttar Pradesh": {
-        "Prompts for Uttar Pradesh": [
+        "Sample Prompts": [
             "I am a female student in Uttar Pradesh looking for scholarships to pursue higher education. Can you provide information on existing financial aid programs available for girls in the state?",
             "As a student from a marginalized community in Uttar Pradesh, I am interested in scholarships or schemes that cater to students like me. Could you guide me on the options available?",
             "I am an orphan girl residing in Uttar Pradesh and in need of financial assistance for my education. Are there specific scholarship programs in the state that support students in similar situations?",
@@ -330,7 +327,7 @@
         ]
     },
     "Uttarakhand": {
-        "Prompts for Uttarakhand": [
+        "Sample Prompts": [
             "I am a female student in Uttarakhand seeking scholarships for higher education. Can you provide information on the scholarships and financial aid programs available for girls in the state?",
             "As a student from an underprivileged background in Uttarakhand, I am looking for scholarships or schemes that can assist students like me. Could you outline the available options?",
             "I am facing financial challenges as a girl in Uttarakhand and need support for my education. Are there specific scholarship programs in the state that cater to students in difficult circumstances?",
@@ -342,7 +339,7 @@
         ]
     },
     "West Bengal": {
-        "Prompts for West Bengal": [
+        "Sample Prompts": [
             "I am a female student in West Bengal searching for scholarships to support my higher education. Can you provide details on the scholarships and financial aid programs available for girls in the state?",
             "As a student from an economically disadvantaged background in West Bengal, I am interested in scholarships or schemes that cater to students facing financial challenges. Could you highlight the available options?",
             "I am a girl in West Bengal facing financial difficulties and require assistance for my education. Are there specific scholarship programs in the state that address the needs of students in similar situations?",
@@ -354,7 +351,7 @@
         ]
     },
     "Assam": {
-        "Prompts if you hail from Assam": [
+        "Sample Prompts": [
             "Due to financial limitations, continuing my education after school seems difficult. Are there any government schemes in Assam that can help girls like me achieve our academic goals?",
             "I'm interested in learning more about educational options for girls in Assam, particularly those that offer financial assistance through scholarships or grants.",
             "I'm eager to further my education! Can you provide me with details on educational programs available for girls in Assam, including financial aid options?",

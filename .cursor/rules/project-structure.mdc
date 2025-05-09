@@ -1,0 +1,55 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Project Structure Guidelines
+
+## Directory Organization
+The project should follow a modular structure:
+
+```
+DhanKanya/
+├── app/                    # Core application code
+│   ├── api/                # API endpoints
+│   ├── models/             # Data models
+│   ├── services/           # Business logic services
+│   └── utils/              # Utility functions
+├── config/                 # Configuration files
+├── tests/                  # Test files
+│   ├── unit/               # Unit tests
+│   └── integration/        # Integration tests
+├── docs/                   # Documentation
+├── scripts/                # Utility scripts
+├── static/                 # Static files
+├── .env.template           # Template for environment variables
+├── requirements.txt        # Project dependencies
+└── README.md               # Project documentation
+```
+
+## Main Files
+- [README.md](mdc:README.md) - Project overview, installation, and usage
+- [requirements.txt](mdc:requirements.txt) - Dependencies with specific versions
+
+## Workflow Guidelines
+- Organize code by feature and functionality
+- Keep the repository root clean
+- Group related modules in appropriately named packages
+- Maintain separation of concerns between different modules
+- Avoid circular dependencies between modules
+
+## Configuration
+- Store configuration in dedicated files
+- Use environment variables for sensitive information
+- Never commit secrets or credentials
+- Include templates for configuration files
+
+## Command Line Interface
+- Implement CLI commands where appropriate
+- Provide help text for all commands
+- Use argument validation and clear error messages
+
+## Static Files and Assets
+- Organize assets by type
+- Use appropriate formats for different types of assets
+- Document the purpose and usage of key assets
