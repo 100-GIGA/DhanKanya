@@ -17,7 +17,7 @@ from app.services.ai_service import get_response
 # Constants
 HINDI_FONT = "Noto Sans Devanagari"
 ENGLISH_FONT = "Inter"
-MAX_MESSAGE_LENGTH = 1000
+MAX_MESSAGE_LENGTH = 1024
 
 def is_hindi(text: str) -> bool:
     """

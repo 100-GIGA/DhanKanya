@@ -80,35 +80,47 @@ def main():
         unsafe_allow_html=True
     )
 
-    # Navigation menu items
-    menu = ["Start with Voice", "Build your Wealth", "Savings and Budgeting"]
+    # Navigation menu items with icons
+    menu_items = [
+        {"name": "Start with Voice", "icon": "🎙️"},
+        {"name": "Build your Wealth", "icon": "💎"},
+        {"name": "Savings and Budgeting", "icon": "💰"}
+    ]
     
     # Initialize session state for navigation if not exists
     if "nav_selection" not in st.session_state:
-        st.session_state.nav_selection = menu[0]
+        st.session_state.nav_selection = menu_items[0]["name"]
     
-    # Create sidebar navigation with direct buttons
-    st.sidebar.title("Navigation")
-    
-    # Create a button for each menu item
-    for item in menu:
-        if st.sidebar.button(item, key=f"nav_{item}", use_container_width=True):
-            st.session_state.nav_selection = item
-            st.rerun()
+    # Create sidebar navigation with modern styling
+    with st.sidebar:
+        # Logo and title
+        st.image("./assets/images/logo.png", width=100)
+        st.title("DhanKanya")
+        st.markdown("---")
+        
+        # Add navigation buttons with icons
+        for item in menu_items:
+            # Create a button with icon and name
+            if st.button(
+                f"{item['icon']} {item['name']}",
+                key=f"nav_{item['name']}",
+                use_container_width=True,
+                type="primary" if st.session_state.nav_selection == item["name"] else "secondary"
+            ):
+                st.session_state.nav_selection = item["name"]
+                st.rerun()
 
     # Create the Anthropic client with error handling
     try:
         logger.info("Attempting to create Anthropic client...")
         client = create_anthropic_client()
-        st.sidebar.success("AI assistant initialized successfully!")
-        
     except Exception as e:
         logger.error("=== Anthropic Client Error ===")
         logger.error(f"Error type: {type(e)}")
         logger.error(f"Error message: {str(e)}")
         logger.error(f"Error args: {e.args}")
         logger.error(f"Traceback:\n{traceback.format_exc()}")
-        st.sidebar.error(f"Failed to initialize the AI assistant. Error: {str(e)}")
+        st.error(f"Failed to initialize the AI assistant. Error: {str(e)}")
         return
 
     # Display the selected page based on session state
