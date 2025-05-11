@@ -8,9 +8,25 @@ which includes the chat interface for interacting with the AI assistant.
 import streamlit as st
 import anthropic
 from typing import List, Dict, Any
+from langdetect import detect
 
 from app.utils.voice_recognition import get_voice_input
 from app.services.ai_service import get_response
+
+def is_hindi(text: str) -> bool:
+    """
+    Check if the text is in Hindi.
+    
+    Args:
+        text: The text to check
+        
+    Returns:
+        bool: True if the text is in Hindi, False otherwise
+    """
+    try:
+        return detect(text) == 'hi'
+    except:
+        return False
 
 def render(client: anthropic.Anthropic) -> None:
     """
@@ -52,7 +68,11 @@ def render(client: anthropic.Anthropic) -> None:
         # Display chat messages
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+                # Apply appropriate font family based on language
+                if message.get("is_hindi", False):
+                    st.markdown(f'<div style="font-family: Noto Sans Devanagari;">{message["content"]}</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown(message["content"])
 
     # Add some spacing before the input area
     st.markdown("<br>", unsafe_allow_html=True)
@@ -78,14 +98,30 @@ def render(client: anthropic.Anthropic) -> None:
             if voice_input:
                 prompt = get_voice_input()
                 if prompt:
-                    st.session_state.messages.append({"role": "user", "content": prompt})
+                    # Check if the prompt is in Hindi
+                    is_hindi_text = is_hindi(prompt)
+                    
+                    # Add message with language info
+                    st.session_state.messages.append({
+                        "role": "user", 
+                        "content": prompt,
+                        "is_hindi": is_hindi_text
+                    })
+                    
                     with st.chat_message("user"):
-                        st.markdown(prompt)
+                        if is_hindi_text:
+                            st.markdown(f'<div style="font-family: Noto Sans Devanagari;">{prompt}</div>', unsafe_allow_html=True)
+                        else:
+                            st.markdown(prompt)
                     
                     with st.chat_message("assistant"):
                         response = get_response(prompt, client)
                         st.markdown(response)
-                        st.session_state.messages.append({"role": "assistant", "content": response})
+                        st.session_state.messages.append({
+                            "role": "assistant", 
+                            "content": response,
+                            "is_hindi": is_hindi_text
+                        })
                     st.rerun()
             
             # Handle text input submission

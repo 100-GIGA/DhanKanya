@@ -23,8 +23,8 @@ def initialize_session() -> None:
     if "earnings" not in st.session_state:
         st.session_state.earnings = []
         
-    if "income" not in st.session_state:
-        st.session_state.income = 4000
+    if "monthly_target" not in st.session_state:
+        st.session_state.monthly_target = 4000
         
     if "savings_goal" not in st.session_state:
         st.session_state.savings_goal = 45000
@@ -63,9 +63,10 @@ def calculate_total_earnings() -> float:
     return sum(earning.get("amount", 0) for earning in st.session_state.earnings)
 
 def update_savings() -> None:
-    """Update the savings amount based on income and expenses."""
+    """Update the savings amount based on total earnings and expenses."""
+    total_earnings = calculate_total_earnings()
     total_expenses = calculate_total_expenses()
-    st.session_state.savings = st.session_state.income - total_expenses
+    st.session_state.savings = total_earnings - total_expenses
 
 def add_expense(date: datetime.date, category: str, description: str, amount: float, avoidable: bool = False) -> None:
     """
@@ -107,8 +108,7 @@ def add_earning(date: datetime.date, category: str, description: str, amount: fl
         "amount": amount
     })
     
-    # Update income with the new earning
-    st.session_state.income += amount
+    # Update savings
     update_savings()
 
 def add_goal(name: str, target_amount: float, target_date: datetime.date) -> None:
