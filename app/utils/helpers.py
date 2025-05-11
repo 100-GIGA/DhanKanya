@@ -15,29 +15,6 @@ from babel.numbers import format_currency
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def check_env_file() -> None:
-    """
-    Validate that .env file exists and its structure is correct.
-    
-    Raises:
-        FileNotFoundError: If .env file does not exist.
-        ValueError: If .env file contains invalid entries.
-    """
-    logger.info("=== Checking .env File ===")
-    if not os.path.exists('.env'):
-        logger.error(".env file does not exist.")
-        raise FileNotFoundError(".env file is missing.")
-
-    with open('.env', 'r') as f:
-        lines = f.readlines()
-        for line in lines:
-            if line.startswith('#') or line.strip() == '':
-                continue
-            if '=' not in line:
-                logger.error(f"Invalid line in .env file: {line}")
-                raise ValueError(f"Invalid line in .env file: {line}")
-        logger.info("Valid .env file structure.")
-
 def log_system_info() -> None:
     """Log system and environment information for diagnostics."""
     logger.info("=== Starting Application Diagnostics ===")

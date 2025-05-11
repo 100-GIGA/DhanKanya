@@ -9,41 +9,10 @@ import unittest
 from unittest.mock import patch, mock_open
 import os
 
-from app.utils.helpers import check_env_file, format_inr
+from app.utils.helpers import format_inr
 
 class TestHelpers(unittest.TestCase):
     """Test cases for helper utility functions."""
-    
-    @patch('os.path.exists')
-    def test_check_env_file_not_found(self, mock_exists):
-        """Test check_env_file function when the .env file does not exist."""
-        # Configure mock to return False for os.path.exists
-        mock_exists.return_value = False
-        
-        # Check that the function raises FileNotFoundError
-        with self.assertRaises(FileNotFoundError):
-            check_env_file()
-    
-    @patch('os.path.exists')
-    @patch('builtins.open', new_callable=mock_open, read_data='ANTHROPIC_API_KEY=test_key\n')
-    def test_check_env_file_valid(self, mock_file, mock_exists):
-        """Test check_env_file function with a valid .env file."""
-        # Configure mock to return True for os.path.exists
-        mock_exists.return_value = True
-        
-        # Should not raise any exception
-        check_env_file()
-    
-    @patch('os.path.exists')
-    @patch('builtins.open', new_callable=mock_open, read_data='INVALID_LINE\n')
-    def test_check_env_file_invalid(self, mock_file, mock_exists):
-        """Test check_env_file function with an invalid .env file."""
-        # Configure mock to return True for os.path.exists
-        mock_exists.return_value = True
-        
-        # Check that the function raises ValueError
-        with self.assertRaises(ValueError):
-            check_env_file()
     
     def test_format_inr(self):
         """Test format_inr function for formatting currency values."""

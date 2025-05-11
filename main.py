@@ -11,7 +11,7 @@ import sys
 import traceback
 
 from app.services.ai_service import create_anthropic_client
-from app.utils.helpers import log_system_info, check_env_file
+from app.utils.helpers import log_system_info
 from app.components import home_page, templates_page, expense_tracker_page
 from config.settings import APP_TITLE, APP_ICON, APP_LAYOUT
 
@@ -36,9 +36,6 @@ def main():
 
     # Log system information for diagnostics
     log_system_info()
-    
-    # Check .env file
-    check_env_file()
 
     # Add custom CSS for layout and spacing only (no hardcoded colors)
     st.markdown(
