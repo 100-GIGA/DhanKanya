@@ -4,7 +4,7 @@ DhanKanya is a financial assistant that provides expert financial guidance, enha
 
 ## Features
 
-- **Voice-Enabled AI Assistant**: Ask questions about financial topics in both English and Hindi
+- **Multilingual AI Assistant**: Ask questions about financial topics in English and Indian languages
 - **State-Specific Financial Information**: Access scholarships, loans, and government schemes tailored to your state
 - **Expense Tracking & Budgeting**: Track your income, expenses, and savings goals
 - **Financial Goal Setting**: Set and monitor progress toward your financial objectives
@@ -47,33 +47,16 @@ DhanKanya/
    ```
 
 3. Install the required packages:
-```bash
-pip install -r requirements.txt
-```
-
-**Note:** If you are running a MacOS with an ARM chip (M series), PyAudio installation might fail. This is due to missing portaudio dependencies. To resolve this, follow these steps:
-
-1. Upgrade pip, setuptools, and wheel:
-    ```bash
-   python -m pip install --upgrade pip setuptools wheel
-    ```
-
-2. Install the portaudio package via Homebrew:
-    ```bash
-    brew install portaudio
-    ```
-
-3. Install PyAudio with additional build options:
    ```bash
-   python -m pip install pyaudio --global-option="build_ext" --global-option="-I/opt/homebrew/include" --global-option="-L/opt/homebrew/lib"
+   pip install -r requirements.txt
    ```
 
 ## Configuration
 
 1. Copy the `.env.template` file to create your own `.env` file:
-    ```bash
+   ```bash
    cp .env.template .env
-    ```
+   ```
 
 2. Edit the `.env` file and add your Anthropic API key:
    ```

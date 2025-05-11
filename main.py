@@ -82,7 +82,7 @@ def main():
 
     # Navigation menu items with icons
     menu_items = [
-        {"name": "Start with Voice", "icon": "🎙️"},
+        {"name": "Financial Assistant", "icon": "💬"},
         {"name": "Build your Wealth", "icon": "💎"},
         {"name": "Savings and Budgeting", "icon": "💰"}
     ]
@@ -125,7 +125,7 @@ def main():
 
     # Display the selected page based on session state
     choice = st.session_state.nav_selection
-    if choice == "Start with Voice":
+    if choice == "Financial Assistant":
         home_page.render(client)
     elif choice == "Build your Wealth":
         templates_page.render(client)

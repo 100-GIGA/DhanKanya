@@ -7,11 +7,10 @@ which includes the chat interface for interacting with the AI assistant.
 
 import streamlit as st
 import anthropic
-from typing import List, Dict, Any, Optional
-from langdetect import detect
+from typing import List, Dict, Any, Optional, Tuple
+from langdetect import detect_langs
 import time
 
-from app.utils.voice_recognition import get_voice_input
 from app.services.ai_service import get_response
 
 # Constants
@@ -19,20 +18,46 @@ HINDI_FONT = "Noto Sans Devanagari"
 ENGLISH_FONT = "Inter"
 MAX_MESSAGE_LENGTH = 1024
 
-def is_hindi(text: str) -> bool:
+# Supported Indian languages and their font mappings
+INDIAN_LANGUAGES = {
+    'hi': 'Noto Sans Devanagari',  # Hindi
+    'mr': 'Noto Sans Devanagari',  # Marathi
+    'ta': 'Noto Sans Tamil',       # Tamil
+    'te': 'Noto Sans Telugu',      # Telugu
+    'bn': 'Noto Sans Bengali',     # Bengali
+    'gu': 'Noto Sans Gujarati',    # Gujarati
+    'pa': 'Noto Sans Gurmukhi',    # Punjabi
+    'ml': 'Noto Sans Malayalam',   # Malayalam
+    'kn': 'Noto Sans Kannada',     # Kannada
+    'en': 'Inter'                  # English
+}
+
+def detect_indian_language(text: str) -> Tuple[str, str]:
     """
-    Check if the text is in Hindi.
+    Detect if the text is in a supported Indian language or English.
     
     Args:
         text: The text to check
         
     Returns:
-        bool: True if the text is in Hindi, False otherwise
+        Tuple[str, str]: A tuple containing (language_code, font_family)
+        Defaults to English if no supported language is detected with >50% confidence
     """
     try:
-        return detect(text) == 'hi'
+        # Get language probabilities
+        lang_probs = detect_langs(text)
+        
+        # Check if the highest probability language is supported and has >50% confidence
+        if lang_probs and lang_probs[0].prob > 0.5:
+            lang_code = lang_probs[0].lang
+            if lang_code in INDIAN_LANGUAGES:
+                return lang_code, INDIAN_LANGUAGES[lang_code]
+        
+        # Default to English if no supported language detected with high confidence
+        return 'en', INDIAN_LANGUAGES['en']
     except:
-        return False
+        # Default to English if detection fails
+        return 'en', INDIAN_LANGUAGES['en']
 
 def initialize_session_state() -> None:
     """Initialize session state variables."""
@@ -51,16 +76,11 @@ def render_message(message: Dict[str, Any]) -> None:
         message: Dictionary containing message data
     """
     with st.chat_message(message["role"]):
-        if message.get("is_hindi", False):
-            st.markdown(
-                f'<div style="font-family: {HINDI_FONT}; font-size: 1.1em;">{message["content"]}</div>',
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(
-                f'<div style="font-family: {ENGLISH_FONT}; font-size: 1.1em;">{message["content"]}</div>',
-                unsafe_allow_html=True
-            )
+        font_family = message.get("font_family", ENGLISH_FONT)
+        st.markdown(
+            f'<div style="font-family: {font_family}; font-size: 1.1em;">{message["content"]}</div>',
+            unsafe_allow_html=True
+        )
 
 def render_header() -> None:
     """Render the header section with logo and welcome message."""
@@ -95,58 +115,29 @@ def render_features() -> None:
         st.markdown("#### 🎯 Goal Setting")
         st.markdown("Plan and save for specific educational milestones")
 
-def handle_voice_input(client: anthropic.Anthropic) -> None:
-    """Handle voice input and process the response."""
-    try:
-        prompt = get_voice_input()
-        if prompt:
-            st.session_state.is_processing = True
-            is_hindi_text = is_hindi(prompt)
-            
-            # Add user message
-            st.session_state.messages.append({
-                "role": "user",
-                "content": prompt,
-                "is_hindi": is_hindi_text
-            })
-            
-            # Get AI response
-            response = get_response(prompt, client)
-            
-            # Add assistant message
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": response,
-                "is_hindi": is_hindi_text
-            })
-            
-            st.session_state.is_processing = False
-            st.rerun()
-    except Exception as e:
-        st.error(f"Error processing voice input: {str(e)}")
-        st.session_state.is_processing = False
-
 def handle_text_input(prompt: str, client: anthropic.Anthropic) -> None:
     """Handle text input and process the response."""
     if prompt:
         st.session_state.is_processing = True
-        is_hindi_text = is_hindi(prompt)
+        lang_code, font_family = detect_indian_language(prompt)
         
-        # Add user message
+        # Add user message with the detected language
         st.session_state.messages.append({
             "role": "user",
             "content": prompt,
-            "is_hindi": is_hindi_text
+            "font_family": font_family,
+            "lang_code": lang_code
         })
         
-        # Get AI response
-        response = get_response(prompt, client)
+        # Get AI response with the same language context
+        response = get_response(prompt, client, lang_code)
         
-        # Add assistant message
+        # Add assistant message with the same font family
         st.session_state.messages.append({
             "role": "assistant",
             "content": response,
-            "is_hindi": is_hindi_text
+            "font_family": font_family,
+            "lang_code": lang_code
         })
         
         st.session_state.is_processing = False
@@ -154,8 +145,8 @@ def handle_text_input(prompt: str, client: anthropic.Anthropic) -> None:
 
 def render_chat_interface(client: anthropic.Anthropic) -> None:
     """Render the chat interface with input controls."""
-    st.markdown("### Chat with DhanKanya")
-    st.markdown("You can ask questions in Hindi using your voice or type them in English.")
+    st.markdown("### Chat with DhanKanya assistant")
+    st.markdown("You can ask questions in most of the Indian languages and English.")
     
     # Chat messages container
     chat_container = st.container()
@@ -163,29 +154,22 @@ def render_chat_interface(client: anthropic.Anthropic) -> None:
         for message in st.session_state.messages:
             render_message(message)
     
-    # Input area
+    # Text input form
     with st.form(key="chat_form", clear_on_submit=True):
-        # Create a row with the input and button
-        input_col1, input_col2 = st.columns([6, 1])
+        prompt = st.text_input(
+            "Ask a question in any Indian language or English",
+            key="chat_input",
+            label_visibility="collapsed",
+            disabled=st.session_state.is_processing
+        )
         
-        with input_col1:
-            prompt = st.text_input(
-                "Ask a question in English",
-                key="chat_input",
-                label_visibility="collapsed",
-                disabled=st.session_state.is_processing
-            )
+        submit_button = st.form_submit_button(
+            "Send",
+            use_container_width=True,
+            disabled=st.session_state.is_processing
+        )
         
-        with input_col2:
-            voice_input = st.form_submit_button(
-                "🎙️",
-                use_container_width=True,
-                disabled=st.session_state.is_processing
-            )
-        
-        if voice_input:
-            handle_voice_input(client)
-        elif prompt:
+        if submit_button and prompt:
             handle_text_input(prompt, client)
 
 def render(client: anthropic.Anthropic) -> None:
