@@ -6,15 +6,12 @@ the application, loaded from environment variables when appropriate.
 """
 
 import os
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
+import streamlit as st
 
 # API Keys
-ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
+ANTHROPIC_API_KEY = st.secrets["ANTHROPIC_API_KEY"]
 if not ANTHROPIC_API_KEY:
-    raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
+    raise ValueError("ANTHROPIC_API_KEY not found in streamlit secrets")
 
 # Application settings
 APP_TITLE = "DhanKanya: Financial Empowerment for Girls in India"

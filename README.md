@@ -27,7 +27,8 @@ DhanKanya/
 ├── scripts/                # Utility scripts
 ├── static/                 # Static files
 ├── assets/                 # Asset files (images, etc.)
-├── .env.template           # Template for environment variables
+├── .streamlit/             # Streamlit configuration
+│   └── secrets.toml.template # Template for Streamlit secrets
 ├── requirements.txt        # Project dependencies
 └── main.py                 # Application entry point
 ```
@@ -53,14 +54,19 @@ DhanKanya/
 
 ## Configuration
 
-1. Copy the `.env.template` file to create your own `.env` file:
+1. Create the `.streamlit` directory if it doesn't exist:
    ```bash
-   cp .env.template .env
+   mkdir -p .streamlit
    ```
 
-2. Edit the `.env` file and add your Anthropic API key:
+2. Copy the `secrets.toml.template` file to create your own `secrets.toml` file:
+   ```bash
+   cp .streamlit/secrets.toml.template .streamlit/secrets.toml
    ```
-   ANTHROPIC_API_KEY=your_api_key_here
+
+3. Edit the `secrets.toml` file and add your Anthropic API key:
+   ```toml
+   ANTHROPIC_API_KEY = "your_api_key_here"
    ```
 
 ## Usage
