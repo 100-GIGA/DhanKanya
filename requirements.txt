@@ -76,3 +76,4 @@ urllib3==2.3.0
 wheel==0.45.1
 yarl==1.18.3
 zstandard==0.23.0
+babel==2.17.0
