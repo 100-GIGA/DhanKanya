@@ -8,8 +8,8 @@ which includes the chat interface for interacting with the AI assistant.
 import streamlit as st
 import anthropic
 from typing import List, Dict, Any, Optional, Tuple
-from langdetect import detect_langs
 import time
+import re
 
 from app.services.ai_service import get_response
 
@@ -35,29 +35,49 @@ INDIAN_LANGUAGES = {
 def detect_indian_language(text: str) -> Tuple[str, str]:
     """
     Detect if the text is in a supported Indian language or English.
+    Uses a simple pattern-based approach to identify script.
     
     Args:
         text: The text to check
         
     Returns:
         Tuple[str, str]: A tuple containing (language_code, font_family)
-        Defaults to English if no supported language is detected with >50% confidence
+        Defaults to English if no supported language is detected
     """
-    try:
-        # Get language probabilities
-        lang_probs = detect_langs(text)
-        
-        # Check if the highest probability language is supported and has >50% confidence
-        if lang_probs and lang_probs[0].prob > 0.5:
-            lang_code = lang_probs[0].lang
-            if lang_code in INDIAN_LANGUAGES:
-                return lang_code, INDIAN_LANGUAGES[lang_code]
-        
-        # Default to English if no supported language detected with high confidence
-        return 'en', INDIAN_LANGUAGES['en']
-    except:
-        # Default to English if detection fails
-        return 'en', INDIAN_LANGUAGES['en']
+    # Devanagari Unicode range (Hindi, Marathi)
+    if re.search(r'[\u0900-\u097F]', text):
+        return 'hi', INDIAN_LANGUAGES['hi']
+    
+    # Bengali Unicode range
+    if re.search(r'[\u0980-\u09FF]', text):
+        return 'bn', INDIAN_LANGUAGES['bn']
+    
+    # Gurmukhi Unicode range (Punjabi)
+    if re.search(r'[\u0A00-\u0A7F]', text):
+        return 'pa', INDIAN_LANGUAGES['pa']
+    
+    # Gujarati Unicode range
+    if re.search(r'[\u0A80-\u0AFF]', text):
+        return 'gu', INDIAN_LANGUAGES['gu']
+    
+    # Tamil Unicode range
+    if re.search(r'[\u0B80-\u0BFF]', text):
+        return 'ta', INDIAN_LANGUAGES['ta']
+    
+    # Telugu Unicode range
+    if re.search(r'[\u0C00-\u0C7F]', text):
+        return 'te', INDIAN_LANGUAGES['te']
+    
+    # Kannada Unicode range
+    if re.search(r'[\u0C80-\u0CFF]', text):
+        return 'kn', INDIAN_LANGUAGES['kn']
+    
+    # Malayalam Unicode range
+    if re.search(r'[\u0D00-\u0D7F]', text):
+        return 'ml', INDIAN_LANGUAGES['ml']
+    
+    # Default to English for any other script
+    return 'en', INDIAN_LANGUAGES['en']
 
 def initialize_session_state() -> None:
     """Initialize session state variables."""
