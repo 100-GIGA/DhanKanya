@@ -129,8 +129,10 @@ def handle_text_input(prompt: str, client: anthropic.Anthropic) -> None:
             "lang_code": lang_code
         })
         
-        # Get AI response with the same language context
-        response = get_response(prompt, client, lang_code)
+        # Display a loading spinner while getting the response
+        with st.spinner("✨ Thinking of a helpful response for you..."):
+            # Get AI response with the same language context
+            response = get_response(prompt, client, lang_code)
         
         # Add assistant message with the same font family
         st.session_state.messages.append({
@@ -154,20 +156,25 @@ def render_chat_interface(client: anthropic.Anthropic) -> None:
         for message in st.session_state.messages:
             render_message(message)
     
-    # Text input form
+    # Text input form with inline submit button
     with st.form(key="chat_form", clear_on_submit=True):
-        prompt = st.text_input(
-            "Ask a question in any Indian language or English",
-            key="chat_input",
-            label_visibility="collapsed",
-            disabled=st.session_state.is_processing
-        )
+        # Create columns for input field and submit button
+        input_col, button_col = st.columns([5, 1])
         
-        submit_button = st.form_submit_button(
-            "Send",
-            use_container_width=True,
-            disabled=st.session_state.is_processing
-        )
+        with input_col:
+            prompt = st.text_input(
+                "Ask a question in any Indian language or English",
+                key="chat_input",
+                label_visibility="collapsed",
+                disabled=st.session_state.is_processing
+            )
+        
+        with button_col:
+            submit_button = st.form_submit_button(
+                "Send",
+                use_container_width=True,
+                disabled=st.session_state.is_processing
+            )
         
         if submit_button and prompt:
             handle_text_input(prompt, client)
