@@ -8,7 +8,14 @@ budgeting, and financial goal management.
 import streamlit as st
 import pandas as pd
 import datetime
+import logging
 from typing import Dict, List, Tuple, Optional, Any
+
+from app.services.expense_tracker_service import ExpenseTrackerService
+from app.components.auth_pages import get_current_user
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 def initialize_session() -> None:
     """
@@ -67,6 +74,18 @@ def update_savings() -> None:
     total_earnings = calculate_total_earnings()
     total_expenses = calculate_total_expenses()
     st.session_state.savings = total_earnings - total_expenses
+    
+    # Update savings goal in the expense tracker service if it exists
+    if "expense_tracker" in st.session_state:
+        current_user = get_current_user()
+        if current_user and st.session_state.expense_tracker:
+            try:
+                st.session_state.expense_tracker.set_savings_goal(
+                    total_goal=st.session_state.savings_goal,
+                    monthly_target=st.session_state.monthly_target
+                )
+            except Exception as e:
+                logger.error(f"Error updating savings goal: {e}")
 
 def add_expense(date: datetime.date, category: str, description: str, amount: float, avoidable: bool = False) -> None:
     """

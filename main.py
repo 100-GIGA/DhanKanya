@@ -12,7 +12,7 @@ import traceback
 
 from app.services.ai_service import create_anthropic_client
 from app.utils.helpers import log_system_info
-from app.components import home_page, templates_page, expense_tracker_page
+from app.components import home_page, templates_page, expense_tracker_page, auth_pages
 from config.settings import APP_TITLE, APP_ICON, APP_LAYOUT
 
 # Configure logging
@@ -77,11 +77,33 @@ def main():
         unsafe_allow_html=True
     )
 
+    # Check if we need to rerun after authentication
+    if "post_auth_rerun" in st.session_state and st.session_state.post_auth_rerun:
+        st.session_state.post_auth_rerun = False
+        st.rerun()
+
+    # Authentication check
+    if not st.session_state.get("is_authenticated", False):
+        is_authenticated = auth_pages.render_auth_pages()
+        
+        # If just authenticated in this run, set flag to rerun and clear the form
+        if is_authenticated and not st.session_state.get("last_run_authenticated", False):
+            st.session_state.last_run_authenticated = True
+            st.session_state.post_auth_rerun = True
+            st.rerun()
+            
+        if not is_authenticated:
+            return  # Stop here if not authenticated
+    else:
+        # Already authenticated
+        st.session_state.last_run_authenticated = True
+
     # Navigation menu items with icons
     menu_items = [
         {"name": "Financial Assistant", "icon": "💬"},
         {"name": "Build your Wealth", "icon": "💎"},
-        {"name": "Savings and Budgeting", "icon": "💰"}
+        {"name": "Savings and Budgeting", "icon": "💰"},
+        {"name": "Profile", "icon": "👤"}
     ]
     
     # Initialize session state for navigation if not exists
@@ -93,6 +115,15 @@ def main():
         # Logo and title
         st.image("./assets/images/logo.png", width=100)
         st.title("DhanKanya")
+        
+        # Display logged in user
+        current_user = auth_pages.get_current_user()
+        if current_user:
+            # Show first name if available, otherwise show username
+            first_name = current_user.get("first_name", "") or ""  # Ensure it's a string
+            display_name = first_name.strip() or current_user["username"]
+            st.write(f"Welcome, {display_name}!")
+        
         st.markdown("---")
         
         # Add navigation buttons with icons
@@ -128,6 +159,8 @@ def main():
         templates_page.render(client)
     elif choice == "Savings and Budgeting":
         expense_tracker_page.render()
+    elif choice == "Profile":
+        auth_pages.render_profile_page()
 
 if __name__ == "__main__":
     main() 

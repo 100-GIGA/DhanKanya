@@ -9,6 +9,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 import altair as alt
+import logging
 from typing import List, Dict, Any, Optional
 
 from app.services.expense_service import (
@@ -27,15 +28,71 @@ from app.services.expense_service import (
 from app.utils.helpers import format_inr
 from app.models.expense_tracker import TransactionCategory
 from app.services.expense_tracker_service import ExpenseTrackerService
+from app.components.auth_pages import get_current_user
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 def render() -> None:
     """Render the expense tracker page with a modern, reactive interface."""
     # Initialize session state
     initialize_session()
     
-    # Ensure the expense_tracker service is initialized
-    if "expense_tracker" not in st.session_state:
-        st.session_state.expense_tracker = ExpenseTrackerService()
+    # Get current user
+    current_user = get_current_user()
+    if not current_user:
+        st.warning("You must be signed in to use the expense tracker.")
+        return
+        
+    username = current_user.get("username")
+    
+    # Ensure the expense_tracker service is initialized with the username
+    if "expense_tracker" not in st.session_state or "expense_tracker_username" not in st.session_state or st.session_state.expense_tracker_username != username:
+        st.session_state.expense_tracker = ExpenseTrackerService(username=username)
+        st.session_state.expense_tracker_username = username
+        
+        # Load savings goal from the service
+        savings_goal = st.session_state.expense_tracker.get_savings_goal()
+        if savings_goal:
+            st.session_state.savings_goal = savings_goal.total_goal
+            st.session_state.monthly_target = savings_goal.monthly_target
+            st.session_state.savings = savings_goal.current_savings
+        
+        # Load transactions from the service to session state
+        service_transactions = st.session_state.expense_tracker.get_transactions()
+        
+        # Convert to the format expected by the existing code
+        st.session_state.transaction_history = []
+        st.session_state.expenses = []
+        st.session_state.earnings = []
+        
+        for transaction in service_transactions:
+            # Add to transaction history
+            st.session_state.transaction_history.append({
+                "date": transaction.date,
+                "category": transaction.category.value,
+                "description": transaction.description,
+                "amount": transaction.amount,
+                "transaction_type": "Expense" if transaction.transaction_type == "expense" else "Earning",
+                "avoidable": transaction.is_avoidable
+            })
+            
+            # Add to appropriate list based on type
+            if transaction.transaction_type == "expense":
+                st.session_state.expenses.append({
+                    "date": transaction.date,
+                    "category": transaction.category.value,
+                    "description": transaction.description,
+                    "amount": transaction.amount,
+                    "avoidable": transaction.is_avoidable
+                })
+            else:
+                st.session_state.earnings.append({
+                    "date": transaction.date,
+                    "category": transaction.category.value,
+                    "description": transaction.description,
+                    "amount": transaction.amount
+                })
     
     # Initialize transaction history in session state if not exists
     if "transaction_history" not in st.session_state:
@@ -248,212 +305,239 @@ def render() -> None:
             progress = min(max(st.session_state.savings / savings_goal, 0.0), 1.0) if savings_goal > 0 else 0
             st.progress(progress, text=f"{progress:.1%} of goal achieved")
             
-            # Estimated time calculation
-            if savings_goal > 0 and monthly_target > 0:
-                remaining_amount = max(0, savings_goal - st.session_state.savings)
-                months_required = remaining_amount / monthly_target
-                months_required = int(months_required) + 1 if months_required % 1 > 0 else int(months_required)
-                st.caption(f"Estimated time to achieve goal: {months_required} months")
+            # Calculate time estimate only if monthly target is set
+            if st.session_state.monthly_target > 0 and savings_goal > st.session_state.savings:
+                remaining = savings_goal - st.session_state.savings
+                months_needed = int(remaining / st.session_state.monthly_target) + (1 if remaining % st.session_state.monthly_target > 0 else 0)
+                st.write(f"🕒 At your current monthly target, you will reach your goal in approximately **{months_needed} months**.")
+            elif savings_goal <= st.session_state.savings and savings_goal > 0:
+                st.write("🎉 Congratulations! You've reached your savings goal!")
         
-        # Transaction history section
-        st.subheader("📊 Transaction History")
+        # Transaction history
+        st.subheader("📝 Recent Transactions")
+        render_recent_transactions()
         
-        # Create tabs for different views
-        history_tabs = st.tabs(["Recent Transactions", "Category Analysis", "Time Analysis"])
+        # Analysis sections
+        col1, col2 = st.columns(2)
         
-        with history_tabs[0]:
-            render_recent_transactions()
-        
-        with history_tabs[1]:
+        with col1:
+            st.subheader("📊 Spending by Category")
             render_category_analysis()
-        
-        with history_tabs[2]:
+            
+        with col2:
+            st.subheader("📈 Time Analysis")
             render_time_analysis()
 
 def render_recent_transactions() -> None:
-    """Render the recent transactions view with filtering options."""
+    """Render the recent transactions list with filters and sorting."""
     if not st.session_state.transaction_history:
-        st.info("No transactions recorded yet. Add some expenses or earnings to see them here.")
+        st.info("No transactions recorded yet. Start by adding income or expenses.")
         return
     
-    # Convert to DataFrame
-    df = pd.DataFrame(st.session_state.transaction_history)
-    
-    # Add filters
-    with st.container(border=True):
-        filter_col1, filter_col2 = st.columns(2)
-        
-        with filter_col1:
-            # Date range filter
-            min_date = df["date"].min() if "date" in df.columns else datetime.date.today() - datetime.timedelta(days=30)
-            max_date = df["date"].max() if "date" in df.columns else datetime.date.today()
-            
-            date_range = st.date_input(
-                "Date Range",
-                value=(min_date, max_date),
-                min_value=min_date - datetime.timedelta(days=365),
-                max_value=datetime.date.today()
-            )
-        
-        with filter_col2:
-            # Transaction type filter
-            transaction_types = ["All", "Expense", "Earning"]
-            selected_type = st.selectbox("Transaction Type", transaction_types)
-    
-    # Apply filters
-    filtered_df = df.copy()
-    
-    if isinstance(date_range, tuple) and len(date_range) == 2:
-        start_date, end_date = date_range
-        filtered_df = filtered_df[(filtered_df["date"] >= start_date) & 
-                                (filtered_df["date"] <= end_date)]
-    
-    if selected_type != "All":
-        filtered_df = filtered_df[filtered_df["transaction_type"] == selected_type]
-    
-    # Sort by date (most recent first)
-    filtered_df = filtered_df.sort_values("date", ascending=False)
-    
-    # Display transactions
-    if filtered_df.empty:
-        st.info("No transactions match the selected filters.")
-    else:
-        # Format for display
-        display_df = filtered_df.copy()
-        display_df["amount"] = display_df["amount"].apply(lambda x: format_inr(x))
-        display_df["date"] = display_df["date"].apply(lambda x: x.strftime("%d %b %Y"))
-        
-        # Clean up column names
-        column_rename = {
-            "date": "Date",
-            "description": "Description",
-            "category": "Category",
-            "amount": "Amount",
-            "transaction_type": "Type"
-        }
-        display_df = display_df.rename(columns=column_rename)
-        
-        # Display the table
-        st.dataframe(
-            display_df,
-            use_container_width=True,
-            hide_index=True
-        )
-
-def render_category_analysis() -> None:
-    """Render the category analysis view with charts."""
-    # Get expense summary
-    expense_summary = get_expense_summary()
-    
-    if expense_summary.empty:
-        st.info("No expense data available for category analysis.")
-        return
-    
-    # Create two columns for different visualizations
-    col1, col2 = st.columns(2)
+    # Filter controls
+    col1, col2, col3 = st.columns(3)
     
     with col1:
-        # Pie chart for expense categories
-        st.markdown("#### Expense Distribution by Category")
-        
-        pie_chart = alt.Chart(expense_summary).mark_arc().encode(
-            theta=alt.Theta(field="total", type="quantitative"),
-            color=alt.Color(field="category", type="nominal"),
-            tooltip=["category", "total"]
-        ).properties(
-            height=300
+        filter_type = st.selectbox(
+            "Filter by",
+            ["All", "Expenses", "Income"],
+            key="filter_type"
         )
-        
-        st.altair_chart(pie_chart, use_container_width=True)
     
     with col2:
-        # Bar chart for expense categories
-        st.markdown("#### Expense Amount by Category")
+        categories = ["All Categories"]
+        if filter_type == "Expenses":
+            categories.extend([cat.value for cat in TransactionCategory if cat.value in ["Rent", "Food", "Transport", "Shopping", "Bills", "Entertainment", "Other"]])
+        elif filter_type == "Income":
+            categories.extend([cat.value for cat in TransactionCategory if cat.value in ["Salary", "Scholarship", "Bonus", "Gift", "Investment Return", "Other"]])
+        else:
+            categories.extend([cat.value for cat in TransactionCategory])
         
-        bar_chart = alt.Chart(expense_summary).mark_bar().encode(
-            x=alt.X("category", sort="-y"),
-            y=alt.Y("total", title="Amount (₹)"),
-            color=alt.Color("category"),
-            tooltip=["category", "total"]
-        ).properties(
-            height=300
+        filter_category = st.selectbox(
+            "Category",
+            categories,
+            key="filter_category"
         )
-        
-        st.altair_chart(bar_chart, use_container_width=True)
-
-def render_time_analysis() -> None:
-    """Render the time analysis view with trend charts."""
-    if not st.session_state.transaction_history:
-        st.info("No transaction data available for time analysis.")
+    
+    with col3:
+        sort_by = st.selectbox(
+            "Sort by",
+            ["Date (newest)", "Date (oldest)", "Amount (highest)", "Amount (lowest)"],
+            key="sort_by"
+        )
+    
+    # Apply filters
+    filtered_transactions = st.session_state.transaction_history.copy()
+    
+    if filter_type == "Expenses":
+        filtered_transactions = [t for t in filtered_transactions if t["transaction_type"] == "Expense"]
+    elif filter_type == "Income":
+        filtered_transactions = [t for t in filtered_transactions if t["transaction_type"] == "Earning"]
+    
+    if filter_category != "All Categories":
+        filtered_transactions = [t for t in filtered_transactions if t["category"] == filter_category]
+    
+    # Apply sorting
+    if sort_by == "Date (newest)":
+        filtered_transactions = sorted(filtered_transactions, key=lambda x: x["date"], reverse=True)
+    elif sort_by == "Date (oldest)":
+        filtered_transactions = sorted(filtered_transactions, key=lambda x: x["date"])
+    elif sort_by == "Amount (highest)":
+        filtered_transactions = sorted(filtered_transactions, key=lambda x: x["amount"], reverse=True)
+    elif sort_by == "Amount (lowest)":
+        filtered_transactions = sorted(filtered_transactions, key=lambda x: x["amount"])
+    
+    # Display transactions
+    if not filtered_transactions:
+        st.info("No transactions match your filters.")
         return
     
-    # Convert to DataFrame
-    df = pd.DataFrame(st.session_state.transaction_history)
+    for transaction in filtered_transactions[:10]:  # Show only the most recent 10 transactions
+        with st.container():
+            cols = st.columns([2, 3, 2, 2])
+            with cols[0]:
+                st.write(f"**{transaction['date'].strftime('%Y-%m-%d')}**")
+            with cols[1]:
+                st.write(transaction["description"])
+            with cols[2]:
+                st.write(transaction["category"])
+            with cols[3]:
+                amount_text = format_inr(transaction["amount"])
+                if transaction["transaction_type"] == "Expense":
+                    st.write(f"🔴 -{amount_text}")
+                else:
+                    st.write(f"🟢 +{amount_text}")
+            
+            st.markdown("---")
     
-    # Convert date column to datetime if it's not already
-    df["date"] = pd.to_datetime(df["date"])
+    # Show button to view all transactions
+    if len(filtered_transactions) > 10:
+        if st.button("Show All Transactions"):
+            # Convert to DataFrame for better display
+            df = pd.DataFrame(filtered_transactions)
+            df["date"] = df["date"].astype(str)
+            df["amount"] = df["amount"].map(lambda x: format_inr(x))
+            st.dataframe(df[["date", "description", "category", "transaction_type", "amount"]])
+
+def render_category_analysis() -> None:
+    """Render the spending by category analysis."""
+    if not st.session_state.expenses:
+        st.info("No expenses recorded yet. Add some expenses to see the analysis.")
+        return
     
-    # Add month column for grouping
-    df["month"] = df["date"].dt.to_period("M")
+    # Group expenses by category
+    categories = {}
+    for expense in st.session_state.expenses:
+        category = expense["category"]
+        amount = expense["amount"]
+        categories[category] = categories.get(category, 0) + amount
     
-    # Group by month and transaction type
-    monthly_summary = df.groupby(["month", "transaction_type"])["amount"].sum().reset_index()
+    # Convert to DataFrame for chart
+    df = pd.DataFrame({
+        "category": list(categories.keys()),
+        "amount": list(categories.values())
+    })
     
-    # Create line chart for trends
-    st.markdown("#### Monthly Transaction Trends")
-    
-    line_chart = alt.Chart(monthly_summary).mark_line().encode(
-        x=alt.X("month:T", title="Month"),
-        y=alt.Y("amount", title="Amount (₹)"),
-        color="transaction_type",
-        tooltip=["month", "transaction_type", "amount"]
+    # Create pie chart
+    chart = alt.Chart(df).mark_arc().encode(
+        theta=alt.Theta(field="amount", type="quantitative"),
+        color=alt.Color(field="category", type="nominal", legend=alt.Legend(title="Categories")),
+        tooltip=["category", "amount"]
     ).properties(
-        height=400
+        width=300,
+        height=300
     )
     
-    st.altair_chart(line_chart, use_container_width=True)
+    st.altair_chart(chart, use_container_width=True)
     
-    # Monthly summary table
-    st.markdown("#### Monthly Summary")
+    # Display category breakdown
+    st.write("Category Breakdown:")
+    for index, row in df.iterrows():
+        st.write(f"- {row['category']}: {format_inr(row['amount'])} ({row['amount']/sum(df['amount'])*100:.1f}%)")
+
+def render_time_analysis() -> None:
+    """Render the spending over time analysis."""
+    if not st.session_state.transaction_history:
+        st.info("No transactions recorded yet. Add some transactions to see the analysis.")
+        return
     
-    # Pivot the data for the table
-    pivot_df = monthly_summary.pivot(
-        index="month",
-        columns="transaction_type",
-        values="amount"
-    ).fillna(0)
+    # Prepare data for the chart
+    transactions_df = pd.DataFrame(st.session_state.transaction_history)
     
-    # Ensure both Expense and Earning columns exist
-    if "Expense" not in pivot_df.columns:
-        pivot_df["Expense"] = 0
-    if "Earning" not in pivot_df.columns:
-        pivot_df["Earning"] = 0
+    if transactions_df.empty:
+        return
     
-    # Calculate net amount
-    pivot_df["Net"] = pivot_df["Earning"] - pivot_df["Expense"]
+    # Ensure date is datetime
+    transactions_df["date"] = pd.to_datetime(transactions_df["date"])
     
-    # Format for display
-    display_pivot = pivot_df.copy()
-    display_pivot["Expense"] = display_pivot["Expense"].apply(lambda x: format_inr(x))
-    display_pivot["Earning"] = display_pivot["Earning"].apply(lambda x: format_inr(x))
-    display_pivot["Net"] = display_pivot["Net"].apply(lambda x: format_inr(x))
+    # Group by date and transaction type
+    income_by_date = transactions_df[transactions_df["transaction_type"] == "Earning"].groupby(transactions_df["date"].dt.date)["amount"].sum().reset_index()
+    expense_by_date = transactions_df[transactions_df["transaction_type"] == "Expense"].groupby(transactions_df["date"].dt.date)["amount"].sum().reset_index()
     
-    # Sort by month descending
-    display_pivot = display_pivot.sort_values("month", ascending=False)
+    income_by_date["type"] = "Income"
+    expense_by_date["type"] = "Expense"
     
-    # Display the table
-    st.dataframe(display_pivot, use_container_width=True, hide_index=True)
+    combined_df = pd.concat([income_by_date, expense_by_date])
+    
+    # Create the chart
+    chart = alt.Chart(combined_df).mark_bar().encode(
+        x="date:T",
+        y="amount:Q",
+        color=alt.Color("type:N", scale=alt.Scale(domain=["Income", "Expense"], range=["green", "red"])),
+        tooltip=["date", "amount", "type"]
+    ).properties(
+        width=400,
+        height=300
+    )
+    
+    st.altair_chart(chart, use_container_width=True)
+    
+    # Display additional stats
+    
+    if len(expense_by_date) > 1:
+        avg_daily_expense = expense_by_date["amount"].mean()
+        st.write(f"Average daily spending: {format_inr(avg_daily_expense)}")
+    
+    if len(income_by_date) > 0 and len(expense_by_date) > 0:
+        avg_income = income_by_date["amount"].mean()
+        avg_expense = expense_by_date["amount"].mean()
+        st.write(f"Average income to expense ratio: {avg_income/avg_expense:.2f}")
 
 def update_goals_and_progress() -> None:
-    """Update goals and progress when savings goal changes."""
+    """Update savings goals and progress in both session state and database."""
     st.session_state.savings_goal = st.session_state.savings_goal_input
-    update_savings()
+    
+    if "expense_tracker" in st.session_state:
+        # Get current monthly target
+        monthly_target = st.session_state.monthly_target
+        
+        # Save to database through the expense tracker service
+        success = st.session_state.expense_tracker.set_savings_goal(
+            total_goal=st.session_state.savings_goal,
+            monthly_target=monthly_target
+        )
+        
+        if not success:
+            logger.error("Failed to update savings goal in database")
 
 def update_monthly_target() -> None:
-    """Update monthly target when it changes."""
+    """Update monthly target in both session state and database."""
     st.session_state.monthly_target = st.session_state.monthly_target_input
+    
+    if "expense_tracker" in st.session_state:
+        # Get current savings goal
+        savings_goal = st.session_state.savings_goal
+        
+        # Save to database through the expense tracker service
+        success = st.session_state.expense_tracker.set_savings_goal(
+            total_goal=savings_goal,
+            monthly_target=st.session_state.monthly_target
+        )
+        
+        if not success:
+            logger.error("Failed to update monthly target in database")
 
 def update_income() -> None:
-    """Update income when monthly target changes."""
-    st.session_state.income = st.session_state.monthly_target_input
-    update_savings() 
+    """Update income values in session state."""
+    # This function is kept for backward compatibility
+    pass 
