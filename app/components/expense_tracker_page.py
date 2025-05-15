@@ -392,32 +392,73 @@ def render_recent_transactions() -> None:
         st.info("No transactions match your filters.")
         return
     
-    for transaction in filtered_transactions[:10]:  # Show only the most recent 10 transactions
-        with st.container():
-            cols = st.columns([2, 3, 2, 2])
-            with cols[0]:
-                st.write(f"**{transaction['date'].strftime('%Y-%m-%d')}**")
-            with cols[1]:
-                st.write(transaction["description"])
-            with cols[2]:
-                st.write(transaction["category"])
-            with cols[3]:
-                amount_text = format_inr(transaction["amount"])
-                if transaction["transaction_type"] == "Expense":
-                    st.write(f"🔴 -{amount_text}")
-                else:
-                    st.write(f"🟢 +{amount_text}")
-            
-            st.markdown("---")
+    # Convert to DataFrame for table display
+    display_transactions = filtered_transactions[:10]  # Show only the most recent 10 transactions
+    df = pd.DataFrame(display_transactions)
+    
+    # Format the data for display
+    df["date"] = df["date"].apply(lambda x: x.strftime("%Y-%m-%d"))
+    
+    # Prepare amounts without indicators
+    def format_amount(row):
+        amount = format_inr(row["amount"])
+        # Return just the amount value without +/-
+        return amount
+    
+    # Create a new column for the amount
+    df["amount_display"] = df.apply(format_amount, axis=1)
+    
+    # Create a color-coded amount column for display
+    df["colored_amount"] = df.apply(
+        lambda x: f"{'🔴 ' if x['transaction_type'] == 'Expense' else '🟢 '}{x['amount_display']}", 
+        axis=1
+    )
+    
+    # Display as dataframe without index
+    display_df = df[["date", "description", "category", "colored_amount"]].copy()
+    
+    # Rename columns for display
+    display_df.columns = ["Date", "Description", "Category", "Amount"]
+    
+    # Display as table with full width and colored amounts
+    st.dataframe(
+        display_df, 
+        hide_index=True,
+        use_container_width=True,
+        column_config={
+            "Amount": st.column_config.TextColumn(
+                "Amount",
+                help="Transaction amount (red for expenses, green for income)",
+                width="medium"
+            )
+        }
+    )
     
     # Show button to view all transactions
     if len(filtered_transactions) > 10:
         if st.button("Show All Transactions"):
-            # Convert to DataFrame for better display
-            df = pd.DataFrame(filtered_transactions)
-            df["date"] = df["date"].astype(str)
-            df["amount"] = df["amount"].map(lambda x: format_inr(x))
-            st.dataframe(df[["date", "description", "category", "transaction_type", "amount"]])
+            st.subheader("All Transactions")
+            
+            full_df = pd.DataFrame(filtered_transactions)
+            full_df["date"] = full_df["date"].apply(lambda x: x.strftime("%Y-%m-%d"))
+            full_df["amount_display"] = full_df.apply(format_amount, axis=1)
+            
+            # Create a color-coded amount column for display 
+            full_df["colored_amount"] = full_df.apply(
+                lambda x: f"{'🔴 ' if x['transaction_type'] == 'Expense' else '🟢 '}{x['amount_display']}", 
+                axis=1
+            )
+            
+            # Prepare dataframe for display
+            all_display_df = full_df[["date", "description", "category", "transaction_type", "colored_amount"]].copy()
+            all_display_df.columns = ["Date", "Description", "Category", "Type", "Amount"]
+            
+            # Display full dataframe without index
+            st.dataframe(
+                all_display_df,
+                hide_index=True,
+                use_container_width=True
+            )
 
 def render_category_analysis() -> None:
     """Render the spending by category analysis."""
