@@ -38,7 +38,6 @@ def render_signin_page():
                 # Set session state
                 st.session_state.user = user
                 st.session_state.is_authenticated = True
-                st.session_state.authentication_time = True  # Flag for first-time authentication
                 return True
             else:
                 st.error("Invalid username/email or password.")
@@ -101,7 +100,6 @@ def render_signup_page():
                     if user:
                         st.session_state.user = user
                         st.session_state.is_authenticated = True
-                        st.session_state.authentication_time = True
                         return True
                 else:
                     st.error("Username or email already exists.")
@@ -123,17 +121,6 @@ def render_auth_pages():
     Returns:
         bool: True if the user is authenticated, False otherwise.
     """
-    # Initialize session state
-    if "is_authenticated" not in st.session_state:
-        st.session_state.is_authenticated = False
-    
-    if "user" not in st.session_state:
-        st.session_state.user = None
-    
-    # If already authenticated, return True
-    if st.session_state.is_authenticated:
-        return True
-    
     # Create tabs for sign-in and sign-up
     tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
     
@@ -147,14 +134,12 @@ def render_auth_pages():
         if render_signup_page():
             return True
     
-    return st.session_state.is_authenticated
+    return st.session_state.get("is_authenticated", False)
 
 def render_profile_page():
     """Render the user profile page."""
-    if not st.session_state.get("is_authenticated", False):
-        st.warning("You must be signed in to view this page.")
-        return
-    
+    # This function should only be called when user is authenticated
+    # The authentication check is now handled in main.py
     user = st.session_state.user
     
     st.title("Your Profile")
@@ -272,8 +257,6 @@ def render_profile_page():
                         # Clear session state
                         st.session_state.is_authenticated = False
                         st.session_state.user = None
-                        if "last_run_authenticated" in st.session_state:
-                            st.session_state.last_run_authenticated = False
                         
                         st.success("Your account has been successfully deleted. Redirecting...")
                         st.rerun()
@@ -287,8 +270,6 @@ def render_profile_page():
         # Clear all authentication data
         st.session_state.is_authenticated = False
         st.session_state.user = None
-        if "last_run_authenticated" in st.session_state:
-            st.session_state.last_run_authenticated = False
         st.rerun()
 
 def is_authenticated():

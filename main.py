@@ -77,26 +77,11 @@ def main():
         unsafe_allow_html=True
     )
 
-    # Check if we need to rerun after authentication
-    if "post_auth_rerun" in st.session_state and st.session_state.post_auth_rerun:
-        st.session_state.post_auth_rerun = False
-        st.rerun()
-
-    # Authentication check
-    if not st.session_state.get("is_authenticated", False):
-        is_authenticated = auth_pages.render_auth_pages()
-        
-        # If just authenticated in this run, set flag to rerun and clear the form
-        if is_authenticated and not st.session_state.get("last_run_authenticated", False):
-            st.session_state.last_run_authenticated = True
-            st.session_state.post_auth_rerun = True
-            st.rerun()
-            
-        if not is_authenticated:
-            return  # Stop here if not authenticated
-    else:
-        # Already authenticated
-        st.session_state.last_run_authenticated = True
+    # Initialize authentication state if not present
+    if "is_authenticated" not in st.session_state:
+        st.session_state.is_authenticated = False
+    if "user" not in st.session_state:
+        st.session_state.user = None
 
     # Navigation menu items with icons
     menu_items = [
@@ -116,21 +101,33 @@ def main():
         st.image("./assets/images/logo.png", width=100)
         st.title("DhanKanya")
         
-        # Display logged in user
+        # Display user status
         current_user = auth_pages.get_current_user()
         if current_user:
             # Show first name if available, otherwise show username
             first_name = current_user.get("first_name", "") or ""  # Ensure it's a string
             display_name = first_name.strip() or current_user["username"]
             st.write(f"Welcome, {display_name}!")
+        else:
+            st.write("👋 Welcome to DhanKanya!")
+            st.caption("Sign in from the Profile section to access personalized features.")
         
         st.markdown("---")
         
         # Add navigation buttons with icons
         for item in menu_items:
+            # Customize button text based on authentication status
+            if item["name"] == "Profile":
+                if st.session_state.get("is_authenticated", False):
+                    button_text = f"{item['icon']} {item['name']}"
+                else:
+                    button_text = f"{item['icon']} Login / SignUp"
+            else:
+                button_text = f"{item['icon']} {item['name']}"
+            
             # Create a button with icon and name
             if st.button(
-                f"{item['icon']} {item['name']}",
+                button_text,
                 key=f"nav_{item['name']}",
                 use_container_width=True,
                 type="primary" if st.session_state.nav_selection == item["name"] else "secondary"
@@ -160,7 +157,21 @@ def main():
     elif choice == "Savings and Budgeting":
         expense_tracker_page.render()
     elif choice == "Profile":
-        auth_pages.render_profile_page()
+        # Handle authentication for profile page
+        if not st.session_state.get("is_authenticated", False):
+            # Show authentication forms in the profile section
+            st.title("Profile")
+            st.markdown("Please sign in or create an account to access your profile.")
+            st.markdown("---")
+            
+            is_authenticated = auth_pages.render_auth_pages()
+            
+            # If just authenticated, refresh to show profile
+            if is_authenticated:
+                st.rerun()
+        else:
+            # User is authenticated, show profile page
+            auth_pages.render_profile_page()
 
 if __name__ == "__main__":
     main() 

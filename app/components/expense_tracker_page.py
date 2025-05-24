@@ -38,61 +38,71 @@ def render() -> None:
     # Initialize session state
     initialize_session()
     
-    # Get current user
+    # Get current user (if authenticated)
     current_user = get_current_user()
-    if not current_user:
-        st.warning("You must be signed in to use the expense tracker.")
-        return
-        
-    username = current_user.get("username")
     
-    # Ensure the expense_tracker service is initialized with the username
-    if "expense_tracker" not in st.session_state or "expense_tracker_username" not in st.session_state or st.session_state.expense_tracker_username != username:
-        st.session_state.expense_tracker = ExpenseTrackerService(username=username)
-        st.session_state.expense_tracker_username = username
-        
-        # Load savings goal from the service
-        savings_goal = st.session_state.expense_tracker.get_savings_goal()
-        if savings_goal:
-            st.session_state.savings_goal = savings_goal.total_goal
-            st.session_state.monthly_target = savings_goal.monthly_target
-            st.session_state.savings = savings_goal.current_savings
-        
-        # Load transactions from the service to session state
-        service_transactions = st.session_state.expense_tracker.get_transactions()
-        
-        # Convert to the format expected by the existing code
-        st.session_state.transaction_history = []
-        st.session_state.expenses = []
-        st.session_state.earnings = []
-        
-        for transaction in service_transactions:
-            # Add to transaction history
-            st.session_state.transaction_history.append({
-                "date": transaction.date,
-                "category": transaction.category.value,
-                "description": transaction.description,
-                "amount": transaction.amount,
-                "transaction_type": "Expense" if transaction.transaction_type == "expense" else "Earning",
-                "avoidable": transaction.is_avoidable
-            })
+    # Use local storage for non-authenticated users, database for authenticated users
+    if current_user:
+        username = current_user.get("username")
+        storage_mode = "database"
+    else:
+        username = "local_user"  # Use a default username for local storage
+        storage_mode = "local"
+    
+    # Initialize storage based on authentication status
+    if storage_mode == "database":
+        # Database storage for authenticated users
+        if "expense_tracker" not in st.session_state or "expense_tracker_username" not in st.session_state or st.session_state.expense_tracker_username != username:
+            st.session_state.expense_tracker = ExpenseTrackerService(username=username)
+            st.session_state.expense_tracker_username = username
+            st.session_state.storage_mode = "database"
             
-            # Add to appropriate list based on type
-            if transaction.transaction_type == "expense":
-                st.session_state.expenses.append({
+            # Load savings goal from the service
+            savings_goal = st.session_state.expense_tracker.get_savings_goal()
+            if savings_goal:
+                st.session_state.savings_goal = savings_goal.total_goal
+                st.session_state.monthly_target = savings_goal.monthly_target
+                st.session_state.savings = savings_goal.current_savings
+            
+            # Load transactions from the service to session state
+            service_transactions = st.session_state.expense_tracker.get_transactions()
+            
+            # Convert to the format expected by the existing code
+            st.session_state.transaction_history = []
+            st.session_state.expenses = []
+            st.session_state.earnings = []
+            
+            for transaction in service_transactions:
+                # Add to transaction history
+                st.session_state.transaction_history.append({
                     "date": transaction.date,
                     "category": transaction.category.value,
                     "description": transaction.description,
                     "amount": transaction.amount,
+                    "transaction_type": "Expense" if transaction.transaction_type == "expense" else "Earning",
                     "avoidable": transaction.is_avoidable
                 })
-            else:
-                st.session_state.earnings.append({
-                    "date": transaction.date,
-                    "category": transaction.category.value,
-                    "description": transaction.description,
-                    "amount": transaction.amount
-                })
+                
+                # Add to appropriate list based on type
+                if transaction.transaction_type == "expense":
+                    st.session_state.expenses.append({
+                        "date": transaction.date,
+                        "category": transaction.category.value,
+                        "description": transaction.description,
+                        "amount": transaction.amount,
+                        "avoidable": transaction.is_avoidable
+                    })
+                else:
+                    st.session_state.earnings.append({
+                        "date": transaction.date,
+                        "category": transaction.category.value,
+                        "description": transaction.description,
+                        "amount": transaction.amount
+                    })
+    else:
+        # Local storage for non-authenticated users
+        st.session_state.storage_mode = "local"
+        st.session_state.expense_tracker = None  # No database service for local users
     
     # Initialize transaction history in session state if not exists
     if "transaction_history" not in st.session_state:
@@ -101,6 +111,12 @@ def render() -> None:
     # Page header
     st.title("💰 Smart Expense Tracker")
     st.markdown("Track your expenses, manage your savings, and achieve your financial goals!")
+    
+    # Storage mode notice
+    if storage_mode == "local":
+        st.info("📝 **Using Local Storage**: Your data is stored locally in your browser session. Sign in from the Profile section to save your data permanently and access it from any device!")
+    else:
+        st.success(f"🔐 **Logged in as {current_user.get('first_name', current_user['username'])}**: Your data is securely saved to your account.")
     
     # Main container
     with st.container():
@@ -175,16 +191,18 @@ def render() -> None:
                 exp_submit = st.form_submit_button("Add Expense", use_container_width=True)
                 
                 if exp_submit and exp_desc and exp_amount > 0:
-                    # Add transaction to the tracker
-                    transaction = st.session_state.expense_tracker.add_transaction(
-                        description=exp_desc,
-                        amount=exp_amount,
-                        category=TransactionCategory(exp_category),
-                        transaction_type="expense",
-                        is_avoidable=exp_avoidable
-                    )
+                    # Add transaction based on storage mode
+                    if st.session_state.storage_mode == "database" and st.session_state.expense_tracker:
+                        # Add transaction to the database tracker
+                        transaction = st.session_state.expense_tracker.add_transaction(
+                            description=exp_desc,
+                            amount=exp_amount,
+                            category=TransactionCategory(exp_category),
+                            transaction_type="expense",
+                            is_avoidable=exp_avoidable
+                        )
                     
-                    # Update session state
+                    # Update session state (for both local and database modes)
                     st.session_state.expenses.append({
                         "date": datetime.date.today(),
                         "category": exp_category,
@@ -236,15 +254,17 @@ def render() -> None:
                 inc_submit = st.form_submit_button("Add Income", use_container_width=True)
                 
                 if inc_submit and inc_desc and inc_amount > 0:
-                    # Add transaction to the tracker
-                    transaction = st.session_state.expense_tracker.add_transaction(
-                        description=inc_desc,
-                        amount=inc_amount,
-                        category=TransactionCategory(inc_category),
-                        transaction_type="income"
-                    )
+                    # Add transaction based on storage mode
+                    if st.session_state.storage_mode == "database" and st.session_state.expense_tracker:
+                        # Add transaction to the database tracker
+                        transaction = st.session_state.expense_tracker.add_transaction(
+                            description=inc_desc,
+                            amount=inc_amount,
+                            category=TransactionCategory(inc_category),
+                            transaction_type="income"
+                        )
                     
-                    # Update session state
+                    # Update session state (for both local and database modes)
                     if "earnings" not in st.session_state:
                         st.session_state.earnings = []
                     st.session_state.earnings.append({
@@ -548,7 +568,7 @@ def update_goals_and_progress() -> None:
     """Update savings goals and progress in both session state and database."""
     st.session_state.savings_goal = st.session_state.savings_goal_input
     
-    if "expense_tracker" in st.session_state:
+    if st.session_state.get("storage_mode") == "database" and "expense_tracker" in st.session_state and st.session_state.expense_tracker:
         # Get current monthly target
         monthly_target = st.session_state.monthly_target
         
@@ -565,7 +585,7 @@ def update_monthly_target() -> None:
     """Update monthly target in both session state and database."""
     st.session_state.monthly_target = st.session_state.monthly_target_input
     
-    if "expense_tracker" in st.session_state:
+    if st.session_state.get("storage_mode") == "database" and "expense_tracker" in st.session_state and st.session_state.expense_tracker:
         # Get current savings goal
         savings_goal = st.session_state.savings_goal
         

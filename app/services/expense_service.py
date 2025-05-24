@@ -75,17 +75,17 @@ def update_savings() -> None:
     total_expenses = calculate_total_expenses()
     st.session_state.savings = total_earnings - total_expenses
     
-    # Update savings goal in the expense tracker service if it exists
-    if "expense_tracker" in st.session_state:
-        current_user = get_current_user()
-        if current_user and st.session_state.expense_tracker:
-            try:
-                st.session_state.expense_tracker.set_savings_goal(
-                    total_goal=st.session_state.savings_goal,
-                    monthly_target=st.session_state.monthly_target
-                )
-            except Exception as e:
-                logger.error(f"Error updating savings goal: {e}")
+    # Update savings goal in the expense tracker service if it exists and user is authenticated
+    if (st.session_state.get("storage_mode") == "database" and 
+        "expense_tracker" in st.session_state and 
+        st.session_state.expense_tracker):
+        try:
+            st.session_state.expense_tracker.set_savings_goal(
+                total_goal=st.session_state.savings_goal,
+                monthly_target=st.session_state.monthly_target
+            )
+        except Exception as e:
+            logger.error(f"Error updating savings goal: {e}")
 
 def add_expense(date: datetime.date, category: str, description: str, amount: float, avoidable: bool = False) -> None:
     """
