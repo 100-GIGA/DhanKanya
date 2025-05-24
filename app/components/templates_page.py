@@ -2,22 +2,17 @@
 Templates page component for the DhanKanya application.
 
 This module contains the UI components for the templates page,
-which displays state-specific financial information and opportunities.
+which provides an AI assistant for state-specific financial guidance.
 """
 
 import streamlit as st
 import anthropic
 from typing import Dict, List, Any
-import pandas as pd
-import plotly.express as px
-import json
-import os
 
 from app.services.template_service import (
     load_templates, 
     get_state_list, 
-    get_template_by_state, 
-    format_template_for_display
+    get_template_by_state
 )
 from app.services.ai_service import query_anthropic
 
@@ -56,55 +51,7 @@ def render_state_selector(templates: Dict[str, Any]) -> str:
     
     return selected_state
 
-def render_opportunities(formatted_template: Dict[str, Any]):
-    """Render the opportunities section with modern cards."""
-    st.subheader("💫 Available Opportunities")
-    
-    # Create tabs for different opportunity types
-    tabs = st.tabs(["🎓 Scholarships", "💰 Educational Loans", "🏛️ Government Schemes"])
-    
-    # Scholarships tab
-    with tabs[0]:
-        scholarships = formatted_template.get('scholarships', [])
-        if scholarships:
-            for scholarship in scholarships:
-                with st.expander(scholarship.get('name', 'Scholarship')):
-                    st.write("**Provider:**", scholarship.get('provider', 'N/A'))
-                    st.write("**Amount:**", scholarship.get('amount', 'Not specified'))
-                    st.write("**Eligibility:**", scholarship.get('eligibility', 'Not specified'))
-                    if scholarship.get('website'):
-                        st.link_button("Visit Website", scholarship.get('website'))
-        else:
-            st.info("No scholarships available for this state yet.")
-    
-    # Educational Loans tab
-    with tabs[1]:
-        loans = formatted_template.get('educational_loans', [])
-        if loans:
-            for loan in loans:
-                with st.expander(loan.get('name', 'Loan')):
-                    st.write("**Provider:**", loan.get('provider', 'N/A'))
-                    st.write("**Interest Rate:**", loan.get('interest_rate', 'Not specified'))
-                    st.write("**Max Amount:**", loan.get('max_amount', 'Not specified'))
-                    st.write("**Eligibility:**", loan.get('eligibility', 'Not specified'))
-                    if loan.get('website'):
-                        st.link_button("Visit Website", loan.get('website'))
-        else:
-            st.info("No educational loans available for this state yet.")
-    
-    # Government Schemes tab
-    with tabs[2]:
-        schemes = formatted_template.get('government_schemes', [])
-        if schemes:
-            for scheme in schemes:
-                with st.expander(scheme.get('name', 'Scheme')):
-                    st.write("**Description:**", scheme.get('description', 'No description available'))
-                    st.write("**Eligibility:**", scheme.get('eligibility', 'Not specified'))
-                    st.write("**Benefits:**", scheme.get('benefits', 'Not specified'))
-                    if scheme.get('website'):
-                        st.link_button("Visit Website", scheme.get('website'))
-        else:
-            st.info("No government schemes available for this state yet.")
+
 
 def render_ai_assistant(selected_state: str, client: anthropic.Anthropic):
     """Render the AI assistant section with a chat-like interface."""
@@ -218,7 +165,7 @@ def render(client: anthropic.Anthropic) -> None:
     
     # Page title
     st.title("Build Your Wealth")
-    st.caption("Explore state-specific financial opportunities, scholarships, educational loans, and government schemes tailored to help you achieve your educational and financial goals. Select your state to get started.")
+    st.caption("Get personalized financial guidance through our AI assistant. Select your state to receive tailored advice on wealth building, scholarships, and financial planning specific to your region.")
     
     # Load templates
     templates = load_templates()
@@ -234,23 +181,5 @@ def render(client: anthropic.Anthropic) -> None:
         st.warning("Please select a state to view available opportunities.")
         return
     
-    # Get template for selected state
-    state_template = get_template_by_state(templates, selected_state)
-    
-    if not state_template:
-        st.warning(f"No information available for {selected_state}.")
-        return
-    
-    # Format template for display
-    formatted_template = format_template_for_display(state_template)
-    
-    # Create two columns for the main content
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        # Render opportunities section
-        render_opportunities(formatted_template)
-    
-    with col2:
-        # Render AI assistant section
-        render_ai_assistant(selected_state, client) 
+    # Render AI assistant section
+    render_ai_assistant(selected_state, client) 
