@@ -13,13 +13,31 @@ ANTHROPIC_API_KEY = st.secrets["ANTHROPIC_API_KEY"]
 if not ANTHROPIC_API_KEY:
     raise ValueError("ANTHROPIC_API_KEY not found in streamlit secrets")
 
+GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY not found in streamlit secrets")
+
 # Application settings
 APP_TITLE = "DhanKanya: Financial Empowerment for Girls in India"
 APP_ICON = ":moneybag:"
 APP_LAYOUT = "wide"
 
-# Claude model settings
-DEFAULT_CLAUDE_MODEL = "claude-3-haiku-20240307"
+# LLM model settings
+DEFAULT_CLAUDE_MODEL = "claude-3-5-sonnet-20241022"
+DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
+DEFAULT_LLM_PROVIDER = "Claude"
+
+# Available LLM options
+LLM_OPTIONS = {
+    "Claude": {
+        "model": DEFAULT_CLAUDE_MODEL,
+        "display_name": "Claude 3.5 Sonnet"
+    },
+    "Gemini": {
+        "model": DEFAULT_GEMINI_MODEL,
+        "display_name": "Gemini 2.0 Flash"
+    }
+}
 
 # Vector database settings
 CHROMA_PATH = 'chroma'

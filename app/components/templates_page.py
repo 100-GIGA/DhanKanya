@@ -7,14 +7,15 @@ which provides an AI assistant for state-specific financial guidance.
 
 import streamlit as st
 import anthropic
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
+import google.generativeai as genai
 
 from app.services.template_service import (
     load_templates, 
     get_state_list, 
     get_template_by_state
 )
-from app.services.ai_service import query_anthropic
+from app.services.ai_service import query_llm
 
 def initialize_session_state():
     """Initialize session state variables."""
@@ -53,9 +54,12 @@ def render_state_selector(templates: Dict[str, Any]) -> str:
 
 
 
-def render_ai_assistant(selected_state: str, client: anthropic.Anthropic):
+def render_ai_assistant(selected_state: str, provider: str, client: Union[anthropic.Anthropic, genai.GenerativeModel]):
     """Render the AI assistant section with a chat-like interface."""
     st.subheader("💬 Ask Your Financial Questions")
+    
+    # Show current AI model
+    st.caption(f"🤖 Currently using: **{provider}**")
     
     # Get sample prompts
     sample_prompts = get_template_by_state(load_templates(), selected_state).get('Sample Prompts', [])
@@ -90,7 +94,7 @@ def render_ai_assistant(selected_state: str, client: anthropic.Anthropic):
         
         # Get AI response
         with st.spinner("Thinking..."):
-            response = query_anthropic(state_specific_query, client, system_prompt=context)
+            response = query_llm(state_specific_query, provider, client, system_prompt=context)
             
             # Add assistant message to chat history
             st.session_state.chat_history.append({"role": "assistant", "content": response})
@@ -145,7 +149,7 @@ def render_ai_assistant(selected_state: str, client: anthropic.Anthropic):
                     
                     # Get AI response
                     with st.spinner("Thinking..."):
-                        response = query_anthropic(state_specific_query, client, system_prompt=context)
+                        response = query_llm(state_specific_query, provider, client, system_prompt=context)
                         
                         # Add assistant message to chat history
                         st.session_state.chat_history.append({"role": "assistant", "content": response})
@@ -153,12 +157,13 @@ def render_ai_assistant(selected_state: str, client: anthropic.Anthropic):
                     # Force a rerun to update the UI
                     st.rerun()
 
-def render(client: anthropic.Anthropic) -> None:
+def render(provider: str, client: Union[anthropic.Anthropic, genai.GenerativeModel]) -> None:
     """
     Render the templates page with state-specific financial information.
     
     Args:
-        client: The initialized Anthropic client for AI interaction.
+        provider: The LLM provider name ('Claude' or 'Gemini').
+        client: The initialized LLM client for AI interaction.
     """
     # Initialize session state
     initialize_session_state()
@@ -182,4 +187,5 @@ def render(client: anthropic.Anthropic) -> None:
         return
     
     # Render AI assistant section
-    render_ai_assistant(selected_state, client) 
+    render_ai_assistant(selected_state, provider, client)
+    render_ai_assistant(selected_state, provider, client) 

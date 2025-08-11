@@ -7,9 +7,10 @@ which includes the chat interface for interacting with the AI assistant.
 
 import streamlit as st
 import anthropic
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Union
 import time
 import re
+import google.generativeai as genai
 
 from app.services.ai_service import get_response
 
@@ -135,7 +136,7 @@ def render_features() -> None:
         st.markdown("#### 🎯 Goal Setting")
         st.markdown("Plan and save for specific educational milestones")
 
-def handle_text_input(prompt: str, client: anthropic.Anthropic) -> None:
+def handle_text_input(prompt: str, provider: str, client: Union[anthropic.Anthropic, genai.GenerativeModel]) -> None:
     """Handle text input and process the response."""
     if prompt:
         st.session_state.is_processing = True
@@ -152,7 +153,7 @@ def handle_text_input(prompt: str, client: anthropic.Anthropic) -> None:
         # Display a loading spinner while getting the response
         with st.spinner("✨ Thinking of a helpful response for you..."):
             # Get AI response with the same language context
-            response = get_response(prompt, client, lang_code)
+            response = get_response(prompt, provider, client, lang_code)
         
         # Add assistant message with the same font family
         st.session_state.messages.append({
@@ -165,10 +166,13 @@ def handle_text_input(prompt: str, client: anthropic.Anthropic) -> None:
         st.session_state.is_processing = False
         st.rerun()
 
-def render_chat_interface(client: anthropic.Anthropic) -> None:
+def render_chat_interface(provider: str, client: Union[anthropic.Anthropic, genai.GenerativeModel]) -> None:
     """Render the chat interface with input controls."""
     st.markdown("### Chat with DhanKanya assistant")
     st.markdown("You can ask questions in most of the Indian languages and English.")
+    
+    # Show current AI model
+    st.caption(f"🤖 Currently using: **{provider}**")
     
     # Chat messages container
     chat_container = st.container()
@@ -197,14 +201,15 @@ def render_chat_interface(client: anthropic.Anthropic) -> None:
             )
         
         if submit_button and prompt:
-            handle_text_input(prompt, client)
+            handle_text_input(prompt, provider, client)
 
-def render(client: anthropic.Anthropic) -> None:
+def render(provider: str, client: Union[anthropic.Anthropic, genai.GenerativeModel]) -> None:
     """
     Render the home page with chat interface.
     
     Args:
-        client: The initialized Anthropic client for AI interaction.
+        provider: The LLM provider name ('Claude' or 'Gemini').
+        client: The initialized LLM client for AI interaction.
     """
     # Initialize session state
     initialize_session_state()
@@ -214,4 +219,4 @@ def render(client: anthropic.Anthropic) -> None:
     st.markdown("---")
     render_features()
     st.markdown("---")
-    render_chat_interface(client) 
+    render_chat_interface(provider, client) 

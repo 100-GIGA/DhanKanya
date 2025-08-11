@@ -10,10 +10,10 @@ import logging
 import sys
 import traceback
 
-from app.services.ai_service import create_anthropic_client
+from app.services.ai_service import create_llm_client
 from app.utils.helpers import log_system_info
 from app.components import home_page, templates_page, expense_tracker_page, auth_pages
-from config.settings import APP_TITLE, APP_ICON, APP_LAYOUT
+from config.settings import APP_TITLE, APP_ICON, APP_LAYOUT, LLM_OPTIONS, DEFAULT_LLM_PROVIDER
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -95,6 +95,10 @@ def main():
     if "nav_selection" not in st.session_state:
         st.session_state.nav_selection = menu_items[0]["name"]
     
+    # Initialize LLM selection if not exists
+    if "selected_llm" not in st.session_state:
+        st.session_state.selected_llm = DEFAULT_LLM_PROVIDER
+    
     # Create sidebar navigation with modern styling
     with st.sidebar:
         # Logo and title
@@ -111,6 +115,27 @@ def main():
         else:
             st.write("👋 Welcome to DhanKanya!")
             st.caption("Sign in from the Profile section to access personalized features.")
+        
+        st.markdown("---")
+        
+        # LLM Model Selection
+        st.subheader("🤖 AI Model")
+        llm_options = list(LLM_OPTIONS.keys())
+        llm_display_names = [LLM_OPTIONS[key]["display_name"] for key in llm_options]
+        
+        selected_index = st.selectbox(
+            "Choose AI Model:",
+            range(len(llm_options)),
+            format_func=lambda x: llm_display_names[x],
+            index=llm_options.index(st.session_state.selected_llm) if st.session_state.selected_llm in llm_options else 0,
+            key="llm_selector"
+        )
+        
+        # Update session state if selection changed
+        new_selection = llm_options[selected_index]
+        if new_selection != st.session_state.selected_llm:
+            st.session_state.selected_llm = new_selection
+            st.rerun()
         
         st.markdown("---")
         
@@ -135,10 +160,11 @@ def main():
                 st.session_state.nav_selection = item["name"]
                 st.rerun()
 
-    # Create the Anthropic client with error handling
+    # Create the LLM client with error handling
     try:
-        logger.info("Attempting to create Anthropic client...")
-        client = create_anthropic_client()
+        selected_provider = st.session_state.selected_llm
+        logger.info(f"Attempting to create {selected_provider} client...")
+        client = create_llm_client(selected_provider)
     except Exception as e:
         logger.error("=== Anthropic Client Error ===")
         logger.error(f"Error type: {type(e)}")
@@ -150,10 +176,12 @@ def main():
 
     # Display the selected page based on session state
     choice = st.session_state.nav_selection
+    selected_provider = st.session_state.selected_llm
+    
     if choice == "Financial Assistant":
-        home_page.render(client)
+        home_page.render(selected_provider, client)
     elif choice == "Build your Wealth":
-        templates_page.render(client)
+        templates_page.render(selected_provider, client)
     elif choice == "Savings and Budgeting":
         expense_tracker_page.render()
     elif choice == "Profile":
