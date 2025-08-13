@@ -38,7 +38,8 @@ from config.settings import (
     DEFAULT_VOICE_LANGUAGE,
     LINKUP_ENABLED,
     LINKUP_SEARCH_DEPTH,
-    LINKUP_MAX_SOURCES
+    LINKUP_MAX_SOURCES,
+    FAST_MODE
 )
 from app.utils.helpers import log_exception, disable_proxies
 from app.services.linkup_service import get_sources_for_query, linkup_service
@@ -277,9 +278,9 @@ def query_llm(query_text: str, provider: str, client: Union[anthropic.Anthropic,
     else:
         raise ValueError(f"Unsupported LLM provider: {provider}")
 
-def query_llm_with_sources(query_text: str, provider: str, client: Union[anthropic.Anthropic, genai.GenerativeModel], system_prompt: Optional[str] = None, lang_code: str = 'en') -> Tuple[str, List[Dict[str, Any]]]:
+def query_llm_with_sources(query_text: str, provider: str, client: Union[anthropic.Anthropic, genai.GenerativeModel], system_prompt: Optional[str] = None, lang_code: str = 'en', include_sources: bool = True) -> Tuple[str, List[Dict[str, Any]]]:
     """
-    Query the appropriate LLM with Linkup sources integration.
+    Query the appropriate LLM with optional Linkup sources integration.
     
     Args:
         query_text: The user's query text.
@@ -287,17 +288,19 @@ def query_llm_with_sources(query_text: str, provider: str, client: Union[anthrop
         client: The initialized client instance.
         system_prompt: Optional system prompt to provide context to the model.
         lang_code: The language code for the response (default: 'en').
+        include_sources: Whether to fetch sources from Linkup (default: True).
         
     Returns:
         Tuple of (LLM response, sources list)
     """
-    # Get the standard LLM response
+    # Get the standard LLM response first (prioritize speed)
     response = query_llm(query_text, provider, client, system_prompt, lang_code)
     
-    # Get sources from Linkup if enabled
+    # Get sources from Linkup only if explicitly requested and enabled
     sources = []
-    if LINKUP_ENABLED:
+    if include_sources and LINKUP_ENABLED:
         try:
+            # Use a shorter timeout for faster responses
             sources = get_sources_for_query(query_text)[:LINKUP_MAX_SOURCES]
             logger.info(f"Retrieved {len(sources)} sources from Linkup for query")
         except Exception as e:
@@ -340,9 +343,37 @@ def get_response(prompt: str, provider: str, client: Union[anthropic.Anthropic, 
         # Handle regular queries
         return query_llm(prompt, provider, client, lang_code=lang_code)
 
-def get_response_with_sources(prompt: str, provider: str, client: Union[anthropic.Anthropic, genai.GenerativeModel], lang_code: str = 'en') -> Tuple[str, List[Dict[str, Any]]]:
+def get_response_with_sources(prompt: str, provider: str, client: Union[anthropic.Anthropic, genai.GenerativeModel], lang_code: str = 'en', include_sources: bool = None, system_prompt: Optional[str] = None) -> Tuple[str, List[Dict[str, Any]]]:
     """
-    Process a user prompt and return response with sources using the specified LLM.
+    Process a user prompt and return response with optional sources using the specified LLM.
+    Sources are controlled by FAST_MODE setting and include_sources parameter.
+    
+    Args:
+        prompt: The user's prompt text.
+        provider: The LLM provider ('Claude' or 'Gemini').
+        client: The initialized client instance.
+        lang_code: The language code for the response (default: 'en').
+        include_sources: Whether to fetch sources from Linkup. If None, uses inverse of FAST_MODE.
+        system_prompt: Optional system prompt to provide context to the model.
+        
+    Returns:
+        Tuple of (response, sources_list)
+    """
+    # Determine whether to include sources based on settings
+    if include_sources is None:
+        include_sources = not FAST_MODE  # Fast mode = no sources by default
+    
+    if is_introduction_query(prompt):
+        response = query_llm(prompt, provider, client, system_prompt, lang_code)
+        return response, []  # No sources for introduction queries
+    else:
+        # Handle regular queries with optional sources
+        return query_llm_with_sources(prompt, provider, client, system_prompt, lang_code, include_sources=include_sources)
+
+def get_fast_response(prompt: str, provider: str, client: Union[anthropic.Anthropic, genai.GenerativeModel], lang_code: str = 'en') -> str:
+    """
+    Process a user prompt and return a fast response without sources.
+    Optimized for speed by skipping Linkup API calls.
     
     Args:
         prompt: The user's prompt text.
@@ -351,14 +382,9 @@ def get_response_with_sources(prompt: str, provider: str, client: Union[anthropi
         lang_code: The language code for the response (default: 'en').
         
     Returns:
-        Tuple of (response, sources_list)
+        LLM response string
     """
-    if is_introduction_query(prompt):
-        response = query_llm(prompt, provider, client, lang_code=lang_code)
-        return response, []  # No sources for introduction queries
-    else:
-        # Handle regular queries with sources
-        return query_llm_with_sources(prompt, provider, client, lang_code=lang_code)
+    return query_llm(prompt, provider, client, lang_code=lang_code)
 
 async def process_voice_query(transcription: str, lang_code: str = 'en') -> Tuple[str, Dict[str, Any]]:
     """

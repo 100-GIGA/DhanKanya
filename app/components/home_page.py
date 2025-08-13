@@ -263,8 +263,9 @@ def handle_text_input(prompt: str, provider: str, client: Union[anthropic.Anthro
     
     # Display a loading spinner while getting the response
     with st.spinner("Thinking of a helpful response for you..."):
-        # Get AI response with sources using the same language context
-        response, sources = get_response_with_sources(prompt, provider, client, lang_code)
+        # Get AI response with sources using the same language context and user preference
+        include_sources = st.session_state.get('include_sources', False)
+        response, sources = get_response_with_sources(prompt, provider, client, lang_code, include_sources=include_sources)
     
     # Add assistant message with the same font family and sources
     st.session_state.messages.append({
@@ -1283,6 +1284,26 @@ def render_chat_interface(provider: str, client: Union[anthropic.Anthropic, gena
     
     # Show current AI model
     st.caption(f"Currently using: **{provider}** with real-time voice processing")
+    
+    # Add sources toggle button above the tabs
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        # Initialize sources toggle in session state if not exists
+        if 'include_sources' not in st.session_state:
+            st.session_state.include_sources = not st.session_state.get('fast_mode', True)
+        
+        include_sources = st.toggle(
+            "📚 Include Sources", 
+            value=st.session_state.include_sources,
+            help="When enabled, responses will include relevant source links from web search. May increase response time."
+        )
+        st.session_state.include_sources = include_sources
+        
+        # Show status based on toggle
+        if include_sources:
+            st.success("🔍 Sources enabled - Responses will include web search results")
+        else:
+            st.info("⚡ Fast mode - Quick responses without sources")
     
     # Create tabs for different input methods at the top
     text_tab, voice_tab = st.tabs(["💬 Text Chat", "🎤 Voice Chat"])

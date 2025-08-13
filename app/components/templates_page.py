@@ -94,7 +94,8 @@ def render_ai_assistant(selected_state: str, provider: str, client: Union[anthro
         
         # Get AI response with sources
         with st.spinner("Thinking..."):
-            response, sources = get_response_with_sources(state_specific_query, provider, client, system_prompt=context)
+            include_sources = st.session_state.get('include_sources', False)
+            response, sources = get_response_with_sources(state_specific_query, provider, client, system_prompt=context, include_sources=include_sources)
             
             # Add assistant message to chat history with sources
             st.session_state.chat_history.append({
@@ -157,7 +158,8 @@ def render_ai_assistant(selected_state: str, provider: str, client: Union[anthro
                     
                     # Get AI response with sources
                     with st.spinner("Thinking..."):
-                        response, sources = get_response_with_sources(state_specific_query, provider, client, system_prompt=context)
+                        include_sources = st.session_state.get('include_sources', False)
+                        response, sources = get_response_with_sources(state_specific_query, provider, client, system_prompt=context, include_sources=include_sources)
                         
                         # Add assistant message to chat history with sources
                         st.session_state.chat_history.append({

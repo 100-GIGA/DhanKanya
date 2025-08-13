@@ -31,13 +31,14 @@ class LinkupService:
             self.enabled = False
             self.client = None
     
-    def search_with_sources(self, query: str, depth: str = "standard") -> Tuple[str, List[Dict[str, Any]]]:
+    def search_with_sources(self, query: str, depth: str = "standard", timeout: int = 30) -> Tuple[str, List[Dict[str, Any]]]:
         """
         Search for information and return sourced answer with links.
         
         Args:
             query: The search query
             depth: Search depth ("standard" or "deep")
+            timeout: Request timeout in seconds (default: 10)
             
         Returns:
             Tuple of (answer_text, sources_list)
@@ -45,7 +46,7 @@ class LinkupService:
         if not self.enabled or not self.client:
             logger.warning("Linkup service not available")
             return "", []
-        
+
         try:
             # Make request to Linkup API
             response = self.client.search(
@@ -90,7 +91,7 @@ class LinkupService:
         except Exception as e:
             logger.error(f"Linkup search failed: {e}")
             return "", []
-    
+
     def enhance_financial_query(self, user_query: str, ai_response: str) -> Tuple[str, List[Dict[str, Any]]]:
         """
         Enhance a financial query by adding relevant sources.

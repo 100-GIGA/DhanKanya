@@ -123,6 +123,7 @@ VOICE_CONVERSATIONS_TABLE = "voice_conversations"
 AUDIO_STORAGE_PATH = "audio_files"
 
 # Linkup settings
-LINKUP_ENABLED = True
+LINKUP_ENABLED = True  # Enabled to allow sources when user requests them
 LINKUP_SEARCH_DEPTH = "standard"  # "standard" or "deep"
-LINKUP_MAX_SOURCES = 5 
+LINKUP_MAX_SOURCES = 5
+FAST_MODE = True  # When True, prioritizes speed over sources (default: no sources) 
