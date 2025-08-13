@@ -55,6 +55,22 @@ def _ensure_expense_tables_exist():
     )
     ''')
     
+    # Create voice_conversations table for storing voice interactions
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS voice_conversations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        session_id TEXT,
+        transcription TEXT NOT NULL,
+        response_text TEXT NOT NULL,
+        language_code TEXT NOT NULL,
+        audio_duration REAL,
+        interaction_mode TEXT DEFAULT 'voice_hybrid',
+        created_at TEXT NOT NULL,
+        metadata TEXT
+    )
+    ''')
+    
     conn.commit()
     conn.close()
 
@@ -77,6 +93,125 @@ def get_user_id_by_username(username: str) -> Optional[int]:
     conn.close()
     
     return result[0] if result else None
+
+def save_voice_conversation(
+    transcription: str,
+    response_text: str,
+    language_code: str,
+    user_id: Optional[int] = None,
+    session_id: Optional[str] = None,
+    audio_duration: Optional[float] = None,
+    metadata: Optional[Dict[str, Any]] = None
+) -> bool:
+    """
+    Save a voice conversation to the database.
+    
+    Args:
+        transcription: User's transcribed speech
+        response_text: AI's response text
+        language_code: Language code ('ta', 'en', etc.)
+        user_id: Optional user ID (for authenticated users)
+        session_id: Optional session identifier
+        audio_duration: Duration of audio in seconds
+        metadata: Optional metadata dictionary
+        
+    Returns:
+        True if saved successfully, False otherwise
+    """
+    try:
+        # Ensure tables exist
+        _ensure_expense_tables_exist()
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Convert metadata to JSON string if provided
+        metadata_json = json.dumps(metadata) if metadata else None
+        
+        cursor.execute('''
+        INSERT INTO voice_conversations 
+        (user_id, session_id, transcription, response_text, language_code, 
+         audio_duration, interaction_mode, created_at, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            user_id,
+            session_id,
+            transcription,
+            response_text,
+            language_code,
+            audio_duration,
+            'voice_hybrid',
+            datetime.now().isoformat(),
+            metadata_json
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Voice conversation saved for language: {language_code}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error saving voice conversation: {e}")
+        return False
+
+def get_voice_conversations(user_id: Optional[int] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    """
+    Retrieve voice conversations from the database.
+    
+    Args:
+        user_id: Optional user ID to filter by
+        limit: Maximum number of conversations to retrieve
+        
+    Returns:
+        List of voice conversation dictionaries
+    """
+    try:
+        # Ensure tables exist
+        _ensure_expense_tables_exist()
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        if user_id:
+            cursor.execute('''
+            SELECT * FROM voice_conversations 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC 
+            LIMIT ?
+            ''', (user_id, limit))
+        else:
+            cursor.execute('''
+            SELECT * FROM voice_conversations 
+            ORDER BY created_at DESC 
+            LIMIT ?
+            ''', (limit,))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        # Convert rows to dictionaries
+        conversations = []
+        for row in rows:
+            conversation = {
+                'id': row[0],
+                'user_id': row[1],
+                'session_id': row[2],
+                'transcription': row[3],
+                'response_text': row[4],
+                'language_code': row[5],
+                'audio_duration': row[6],
+                'interaction_mode': row[7],
+                'created_at': row[8],
+                'metadata': json.loads(row[9]) if row[9] else {}
+            }
+            conversations.append(conversation)
+        
+        return conversations
+        
+    except Exception as e:
+        logger.error(f"Error retrieving voice conversations: {e}")
+        return []
 
 def save_transaction(
     user_id: int,

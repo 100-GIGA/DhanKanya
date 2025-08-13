@@ -101,6 +101,26 @@ def main():
     
     # Create sidebar navigation with modern styling
     with st.sidebar:
+        # Add custom CSS for better sidebar styling
+        st.markdown("""
+        <style>
+        .sidebar .sidebar-content {
+            width: 100%;
+            padding: 1rem;
+        }
+        .stButton > button {
+            width: 100%;
+            margin: 0.25rem 0;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .stButton > button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
         # Logo and title
         st.image("./assets/images/logo.png", width=100)
         st.title("DhanKanya")

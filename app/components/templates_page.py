@@ -15,7 +15,7 @@ from app.services.template_service import (
     get_state_list, 
     get_template_by_state
 )
-from app.services.ai_service import query_llm
+from app.services.ai_service import query_llm, get_response_with_sources
 
 def initialize_session_state():
     """Initialize session state variables."""
@@ -92,12 +92,16 @@ def render_ai_assistant(selected_state: str, provider: str, client: Union[anthro
         else:
             state_specific_query = prompt
         
-        # Get AI response
+        # Get AI response with sources
         with st.spinner("Thinking..."):
-            response = query_llm(state_specific_query, provider, client, system_prompt=context)
+            response, sources = get_response_with_sources(state_specific_query, provider, client, system_prompt=context)
             
-            # Add assistant message to chat history
-            st.session_state.chat_history.append({"role": "assistant", "content": response})
+            # Add assistant message to chat history with sources
+            st.session_state.chat_history.append({
+                "role": "assistant", 
+                "content": response,
+                "sources": sources
+            })
     
     # Display chat history in reverse order (most recent first)
     # Process messages in pairs (user + assistant)
@@ -112,6 +116,10 @@ def render_ai_assistant(selected_state: str, provider: str, client: Union[anthro
                 st.write(user_msg["content"])
             with st.chat_message(assistant_msg["role"]):
                 st.write(assistant_msg["content"])
+                
+                # Display sources if available
+                if "sources" in assistant_msg and assistant_msg["sources"]:
+                    render_sources_templates(assistant_msg["sources"])
     
     # Only show sample prompts if there's no chat history
     if not st.session_state.chat_history:
@@ -147,15 +155,68 @@ def render_ai_assistant(selected_state: str, provider: str, client: Union[anthro
                     else:
                         state_specific_query = prompt
                     
-                    # Get AI response
+                    # Get AI response with sources
                     with st.spinner("Thinking..."):
-                        response = query_llm(state_specific_query, provider, client, system_prompt=context)
+                        response, sources = get_response_with_sources(state_specific_query, provider, client, system_prompt=context)
                         
-                        # Add assistant message to chat history
-                        st.session_state.chat_history.append({"role": "assistant", "content": response})
+                        # Add assistant message to chat history with sources
+                        st.session_state.chat_history.append({
+                            "role": "assistant", 
+                            "content": response,
+                            "sources": sources
+                        })
                     
                     # Force a rerun to update the UI
                     st.rerun()
+
+def render_sources_templates(sources: List[Dict[str, Any]]) -> None:
+    """
+    Render source links in Perplexity-style layout using Streamlit native components.
+    
+    Args:
+        sources: List of source dictionaries from Linkup
+    """
+    if not sources:
+        return
+    
+    # Create inline numbered source badges like Perplexity using Streamlit columns
+    st.markdown("**Sources:**")
+    
+    # Create horizontal layout for source badges
+    cols = st.columns(min(len(sources), 8))  # Max 8 sources per row
+    for i, source in enumerate(sources):
+        if i < 8:  # Only show first 8 sources inline
+            source_num = i + 1
+            name = source.get("name", "Unknown Source")
+            url = source.get("url", "")
+            
+            with cols[i]:
+                if url:
+                    st.markdown(f"[**{source_num}**]({url})", help=name)
+                else:
+                    st.markdown(f"**{source_num}**")
+    
+    # Add expandable section for detailed sources
+    with st.expander(f"📚 View detailed sources ({len(sources)} found)", expanded=False):
+        for i, source in enumerate(sources, 1):
+            name = source.get("name", "Unknown Source")
+            url = source.get("url", "")
+            snippet = source.get("snippet", "")
+            
+            # Create source card using Streamlit container
+            with st.container():
+                st.markdown(f"**{i}. {name}**")
+                
+                if snippet:
+                    st.caption(snippet)
+                
+                if url:
+                    st.markdown(f"🔗 [Visit Source]({url})")
+                else:
+                    st.caption("No link available")
+                
+                if i < len(sources):  # Add separator if not last item
+                    st.markdown("---")
 
 def render(provider: str, client: Union[anthropic.Anthropic, genai.GenerativeModel]) -> None:
     """
@@ -187,5 +248,4 @@ def render(provider: str, client: Union[anthropic.Anthropic, genai.GenerativeMod
         return
     
     # Render AI assistant section
-    render_ai_assistant(selected_state, provider, client)
     render_ai_assistant(selected_state, provider, client) 

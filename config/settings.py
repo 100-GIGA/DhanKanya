@@ -6,16 +6,44 @@ the application, loaded from environment variables when appropriate.
 """
 
 import os
-import streamlit as st
 
-# API Keys
-ANTHROPIC_API_KEY = st.secrets["ANTHROPIC_API_KEY"]
-if not ANTHROPIC_API_KEY:
-    raise ValueError("ANTHROPIC_API_KEY not found in streamlit secrets")
+# Check if streamlit is available and in proper context
+try:
+    import streamlit as st
+    # Check if we're in streamlit context
+    if hasattr(st, 'secrets'):
+        STREAMLIT_AVAILABLE = True
+    else:
+        STREAMLIT_AVAILABLE = False
+except (ImportError, AttributeError):
+    STREAMLIT_AVAILABLE = False
+    st = None
 
-GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY not found in streamlit secrets")
+# API Keys - handle missing secrets gracefully for testing
+if STREAMLIT_AVAILABLE:
+    try:
+        ANTHROPIC_API_KEY = st.secrets["ANTHROPIC_API_KEY"]
+    except (KeyError, FileNotFoundError, AttributeError):
+        ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+else:
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+
+if STREAMLIT_AVAILABLE:
+    try:
+        GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+    except (KeyError, FileNotFoundError, AttributeError):
+        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+else:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+# Linkup API Key
+if STREAMLIT_AVAILABLE:
+    try:
+        LINKUP_API_KEY = st.secrets["LINKUP_API_KEY"]
+    except (KeyError, FileNotFoundError, AttributeError):
+        LINKUP_API_KEY = os.getenv("LINKUP_API_KEY", "")
+else:
+    LINKUP_API_KEY = os.getenv("LINKUP_API_KEY", "")
 
 # Application settings
 APP_TITLE = "DhanKanya: Financial Empowerment for Girls in India"
@@ -74,4 +102,27 @@ INTRODUCTION_PROMPTS = [
     r'hello',
     r'hey',
     r'namaste'
-] 
+]
+
+# Voice settings for Tamil + English
+VOICE_ENABLED = True
+SUPPORTED_VOICE_LANGUAGES = {
+    'en': 'English',
+    'ta': 'Tamil'
+}
+DEFAULT_VOICE_LANGUAGE = 'en'
+
+# Gemini Live settings
+GEMINI_LIVE_MODEL = "gemini-2.0-flash-exp"
+VOICE_RECORDING_MAX_DURATION = 30  # seconds
+VOICE_CHUNK_SIZE = 1024
+AUDIO_SAMPLE_RATE = 16000
+
+# Voice database settings
+VOICE_CONVERSATIONS_TABLE = "voice_conversations"
+AUDIO_STORAGE_PATH = "audio_files"
+
+# Linkup settings
+LINKUP_ENABLED = True
+LINKUP_SEARCH_DEPTH = "standard"  # "standard" or "deep"
+LINKUP_MAX_SOURCES = 5 

@@ -81,10 +81,16 @@ zstandard==0.23.0
 babel==2.17.0
 plotly==6.0.1
 
-# Voice features dependencies (for future implementation)
-# Uncomment when implementing voice features
-# livekit-api>=0.15.0
-# livekit-agents>=0.8.0  
-# livekit-plugins-sarvam>=0.1.0
-# streamlit-webrtc>=0.47.0
-# pyaudio>=0.2.11
+# Voice features dependencies - Using exact versions from reference
+google-genai==1.20.0
+fastapi==0.110.2
+uvicorn[standard]==0.29.0
+websockets==13.0.0
+python-multipart==0.0.9
+pydub
+webrtcvad>=2.0.10
+PyAudio==0.2.14
+audio-recorder-streamlit
+numpy
+wave
+linkup-sdk
