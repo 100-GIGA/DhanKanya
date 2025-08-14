@@ -594,6 +594,55 @@ def render_integrated_voice_interface():
         60% { content: '...'; }
         80%, 100% { content: ''; }
     }
+    
+    /* Voice Status Indicator */
+    .voice-status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 1rem;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        transition: all 0.3s ease;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .voice-status-indicator.listening {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        animation: pulse-listening 2s infinite;
+    }
+    
+    .voice-status-indicator.speaking {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        animation: pulse-speaking 1.5s infinite;
+    }
+    
+    .status-icon {
+        font-size: 1.2em;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+    
+    .status-text {
+        font-size: 0.95em;
+        letter-spacing: 0.5px;
+    }
+    
+    @keyframes pulse-listening {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.9; }
+    }
+    
+    @keyframes pulse-speaking {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        25% { transform: scale(1.03); opacity: 0.95; }
+        75% { transform: scale(1.02); opacity: 0.98; }
+    }
     </style>
     </style>
     
@@ -602,6 +651,13 @@ def render_integrated_voice_interface():
         <div style="margin: 30px 0; text-align: center;">
             <div class="connection-status connecting" id="connectionStatus">
                 🔄 Connecting...
+            </div>
+        </div>
+        
+        <div style="margin: 20px 0; text-align: center;">
+            <div class="voice-status-indicator" id="voiceStatus" style="display: none;">
+                <span class="status-icon" id="statusIcon">🔊</span>
+                <span class="status-text" id="statusText">Ready</span>
             </div>
         </div>
         
@@ -642,10 +698,51 @@ def render_integrated_voice_interface():
     const newSessionBtn = document.getElementById('newSessionBtn');
     const chatContainer = document.getElementById('chatContainer');
     const connectionStatus = document.getElementById('connectionStatus');
+    const voiceStatus = document.getElementById('voiceStatus');
+    const statusIcon = document.getElementById('statusIcon');
+    const statusText = document.getElementById('statusText');
     
     function updateConnectionStatus(status_text, isConnected) {
         connectionStatus.textContent = status_text;
         connectionStatus.className = 'connection-status ' + (isConnected ? 'connected' : 'disconnected');
+    }
+    
+    function updateVoiceStatus(state, text, icon) {
+        if (!voiceStatus) return;
+        
+        // Remove all status classes
+        voiceStatus.className = 'voice-status-indicator';
+        
+        // Add specific state class
+        if (state) {
+            voiceStatus.className += ' ' + state;
+        }
+        
+        // Update text and icon
+        if (statusText) statusText.textContent = text;
+        if (statusIcon) statusIcon.textContent = icon;
+        
+        // Show/hide the indicator
+        if (state === 'hide') {
+            voiceStatus.style.display = 'none';
+        } else {
+            voiceStatus.style.display = 'inline-flex';
+        }
+    }
+    
+    function showListening() {
+        updateVoiceStatus('listening', 'Listening...', '🎤');
+        console.log('👂 Voice status: Listening');
+    }
+    
+    function showSpeaking() {
+        updateVoiceStatus('speaking', 'Speaking...', '🔊');
+        console.log('🗣️ Voice status: Speaking');
+    }
+    
+    function hideVoiceStatus() {
+        updateVoiceStatus('hide', 'Ready', '🔇');
+        console.log('🔇 Voice status: Hidden');
     }
     
     function addChatMessage(type, text) {
@@ -780,6 +877,9 @@ def render_integrated_voice_interface():
         const audioBuffer = audioQueue.shift();
         isPlayingAudio = true;
         
+        // Show speaking status when audio starts
+        showSpeaking();
+        
         const source = audioContext.createBufferSource();
         source.buffer = audioBuffer;
         
@@ -802,6 +902,12 @@ def render_integrated_voice_interface():
             console.log('🎵 Audio chunk finished, playing next...');
             isPlayingAudio = false;
             currentAudioSource = null;
+            
+            // Check if there are more audio chunks to play
+            if (audioQueue.length === 0) {
+                // No more audio, hide speaking status
+                hideVoiceStatus();
+            }
             
             // Immediately try to play next chunk for seamless flow
             setTimeout(() => playNextAudio(), 0);
@@ -1166,6 +1272,9 @@ def render_integrated_voice_interface():
             status.textContent = '🔴 Recording... DhanKanya is listening!';
             status.style.color = '#ef4444';
             
+            // Show listening status
+            showListening();
+            
             addChatMessage('status', 'Recording started! Speak to DhanKanya now...');
             
         }).catch(error => {
@@ -1189,6 +1298,9 @@ def render_integrated_voice_interface():
         
         // Stop any currently playing audio to avoid confusion
         stopAllAudio();
+        
+        // Hide voice status indicator
+        hideVoiceStatus();
         
         // Reset start button
         startBtn.textContent = '🎤 Start Recording';
