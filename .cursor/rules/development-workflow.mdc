@@ -1,0 +1,54 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Development Workflow
+
+## Environment Setup
+- Use Python 3.12 or higher
+- Create and activate a virtual environment for development
+- Install dependencies from requirements.txt
+- Set up environment variables from .env.template
+
+## Version Control
+- Create feature branches for new development
+- Write meaningful commit messages
+- Keep commits focused on single changes
+- Squash multiple small commits before merging
+
+## Code Review Process
+- Review code for readability and maintainability
+- Ensure adherence to project coding standards
+- Check for security vulnerabilities
+- Verify test coverage for new code
+
+## Testing
+- Write tests before implementing features (TDD approach)
+- Run tests locally before committing
+- Maintain high test coverage
+- Include both unit and integration tests
+
+## Documentation Updates
+- Update README.md with any new features or changes
+- Document all public APIs
+- Include usage examples where helpful
+- Keep documentation in sync with code changes
+
+## Dependency Management
+- Pin dependency versions in requirements.txt
+- Regularly update dependencies for security patches
+- Review new dependencies carefully
+- Document the purpose of each dependency
+
+## Quality Checks
+- Run linters (flake8, pylint) to enforce coding standards
+- Use type checking with mypy
+- Format code with Black
+- Sort imports with isort
+
+## Performance Considerations
+- Profile code to identify bottlenecks
+- Optimize critical sections
+- Consider memory usage and efficiency
+- Document performance characteristics

@@ -1,0 +1,54 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Python Development Standards
+
+## Version Compatibility
+All code in this project must be compatible with Python 3.12 or higher. Avoid using deprecated features or syntax that may not work in these versions.
+
+## Project Structure
+- Maintain a modular folder structure
+- Group related functionality in appropriate packages
+- Use clear, descriptive names for modules, classes, and functions
+- Keep files focused on a single responsibility
+
+## Code Quality
+- Write descriptive docstrings for all modules, classes, and functions
+- Include inline comments for complex logic
+- Follow PEP 8 style guidelines
+- Use type hints to improve code readability and assist with static type checking
+- Keep functions small and focused on a single task
+
+## Dependencies
+- All dependencies must be listed in [requirements.txt](mdc:requirements.txt)
+- Use specific version numbers to ensure reproducibility
+- Regularly review and update dependencies
+- Avoid unnecessary dependencies that could be replaced with standard library alternatives
+- Consider security implications when adding new dependencies
+
+## Documentation
+- Keep [README.md](mdc:README.md) updated with:
+  - Project overview and purpose
+  - Installation instructions
+  - Usage examples
+  - Configuration details
+  - Development setup
+  - Contribution guidelines
+
+## Development Workflow
+- Use Git for version control
+- Write comprehensive commit messages
+- Create feature branches for new development
+- Maintain a clean git history
+
+## Testing
+- Write unit tests for all functionality
+- Aim for high test coverage
+- Tests should be fast and independent
+
+## Security
+- Never commit secrets or credentials
+- Use environment variables for configuration
+- Follow security best practices for web APIs and data handling
